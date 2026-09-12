@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, BookOpen, Feather, Mail } from "lucide-react";
 import { artworks } from "../data/artworks";
+import { achievements } from "../data/achievements";
 import { PoetryCard } from "../components/PoetryCard";
 import { ArtworkCard } from "../components/ArtworkCard";
 import { ArtworkLightbox } from "../components/ArtworkLightbox";
@@ -23,7 +24,7 @@ export const HomePage: React.FC = () => {
     author: "Rishitha Gorupati",
     synopsis: [],
     coverFront: "/assets/books/that_day_is_inevitable_front.jpg",
-    buyLinks: { amazon: "https://amzn.in/d/02x4k9iQ", flipkart: "", isFlipkartPlaceholder: true },
+    buyLinks: { amazon: "https://amzn.in/d/02x4k9iQ" },
     details: {},
   };
 
@@ -73,10 +74,6 @@ export const HomePage: React.FC = () => {
                 &ldquo;{authorData.tagline}&rdquo;
               </blockquote>
             </div>
-
-            <p className="font-serif text-base sm:text-lg text-[#5C564E] max-w-2xl leading-relaxed">
-              {authorData.shortBio}
-            </p>
 
             {/* Hero CTA Buttons */}
             <div className="pt-4 flex flex-wrap items-center justify-center lg:justify-start gap-4">
@@ -267,12 +264,19 @@ Forever and ever..`}
               <p className="font-serif text-base sm:text-lg text-[#4B453E] leading-relaxed">
                 {authorData.bio}
               </p>
-              <div className="pt-2">
+              <div className="pt-2 flex flex-wrap items-center gap-x-6 gap-y-2">
                 <Link
                   to="/about"
                   className="inline-flex items-center text-xs uppercase tracking-[0.16em] font-medium text-[#221E1B] hover:text-[#856E4E] transition-colors"
                 >
                   Read Full Journey &amp; Creative Disciplines
+                  <ArrowRight className="w-3.5 h-3.5 ml-2" />
+                </Link>
+                <Link
+                  to="/achievements"
+                  className="inline-flex items-center text-xs uppercase tracking-[0.16em] font-medium text-[#856E4E] hover:text-[#221E1B] transition-colors"
+                >
+                  View Certificates &amp; Achievements ({achievements.length})
                   <ArrowRight className="w-3.5 h-3.5 ml-2" />
                 </Link>
               </div>

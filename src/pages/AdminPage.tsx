@@ -89,7 +89,7 @@ export const AdminPage: React.FC = () => {
     coverBack: "/assets/books/that_day_is_inevitable_back.jpg",
     mockup: "/assets/books/that_day_is_inevitable_mockup.jpg",
     amazonLink: "https://amzn.in/d/02x4k9iQ",
-    flipkartLink: "https://www.flipkart.com/PLACEHOLDER",
+    flipkartLink: "",
     publisher: "String Production India",
     isbn: "978-93-58136-03-6",
     format: "Paperback",
@@ -281,7 +281,7 @@ export const AdminPage: React.FC = () => {
       coverBack: book.coverBack || "",
       mockup: book.mockup || "",
       amazonLink: book.buyLinks.amazon,
-      flipkartLink: book.buyLinks.flipkart,
+      flipkartLink: book.buyLinks.flipkart || "",
       publisher: book.details.publisher || "",
       isbn: book.details.isbn || "",
       format: book.details.format || "Paperback",
@@ -316,8 +316,8 @@ export const AdminPage: React.FC = () => {
       mockup: bookForm.mockup.trim() || undefined,
       buyLinks: {
         amazon: bookForm.amazonLink.trim(),
-        flipkart: bookForm.flipkartLink.trim(),
-        isFlipkartPlaceholder: !bookForm.flipkartLink.trim(),
+        flipkart: bookForm.flipkartLink.trim() || undefined,
+        isFlipkartPlaceholder: false,
       },
       details: {
         format: bookForm.format,
@@ -528,7 +528,7 @@ export const AdminPage: React.FC = () => {
 
             {authError && (
               <p className="text-xs text-[#C53030]">
-                Incorrect passkey. (Hint: <span className="font-mono font-semibold">rishitha</span>)
+                Incorrect passkey. Please try again.
               </p>
             )}
 
@@ -541,9 +541,6 @@ export const AdminPage: React.FC = () => {
             </button>
           </form>
 
-          <p className="text-[11px] text-[#968D81] pt-2">
-            Default author passkey is <span className="font-mono text-[#856E4E]">rishitha</span>
-          </p>
         </div>
       </div>
     );
@@ -1078,7 +1075,7 @@ export const AdminPage: React.FC = () => {
                 Change Admin Portal Passkey
               </h4>
               <p className="font-serif italic text-xs text-[#736B61] mt-0.5">
-                Set a personal secret passkey to unlock your Author Portal. Default is <span className="font-mono font-semibold text-[#856E4E]">rishitha</span>.
+                Set a personal secret passkey to unlock your Author Portal.
               </p>
             </div>
 

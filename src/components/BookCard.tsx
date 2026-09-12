@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, ExternalLink, ArrowRight, BookOpen } from "lucide-react";
+import { ShoppingBag, ExternalLink, ArrowRight } from "lucide-react";
 import type { Book } from "../data/books";
 
 interface BookCardProps {
@@ -107,18 +107,7 @@ export const BookCard: React.FC<BookCardProps> = ({ book, isDetailed = false }) 
               <ExternalLink className="w-3.5 h-3.5 ml-2 opacity-70" />
             </a>
 
-            <div className="relative group inline-block">
-              <a
-                href={book.buyLinks.flipkart}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-6 py-3 bg-[#F7F3EB] text-[#736B61] border border-[#EAE3D6] text-xs uppercase tracking-[0.16em] font-medium rounded-sm hover:bg-[#EFE9DD] hover:text-[#221E1B] transition-colors focus:outline-none focus:ring-2 focus:ring-[#856E4E]"
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Buy on Flipkart
-                <span className="ml-2 text-[10px] text-[#968D81] font-mono">[Placeholder]</span>
-              </a>
-            </div>
+
 
             {!isDetailed && (
               <Link

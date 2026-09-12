@@ -11,6 +11,7 @@ import { MusingDetailPage } from "./pages/MusingDetailPage";
 import { BooksPage } from "./pages/BooksPage";
 import { BookDetailPage } from "./pages/BookDetailPage";
 import { AboutPage } from "./pages/AboutPage";
+import { AchievementsPage } from "./pages/AchievementsPage";
 import { ContactPage } from "./pages/ContactPage";
 import { AdminPage } from "./pages/AdminPage";
 import { DataProvider } from "./context/DataContext";
@@ -33,6 +34,7 @@ export const App: React.FC = () => {
               <Route path="/music" element={<Navigate to="/musings" replace />} />
               <Route path="/books" element={<BooksPage />} />
               <Route path="/books/:slug" element={<BookDetailPage />} />
+              <Route path="/achievements" element={<AchievementsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/admin" element={<AdminPage />} />

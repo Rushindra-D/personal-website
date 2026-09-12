@@ -1,29 +1,35 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { Feather, BookOpen, Palette, PenTool, ArrowRight } from "lucide-react";
+import { Feather, BookOpen, Palette, PenTool, ArrowRight, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { Timeline } from "../components/Timeline";
+import { achievements } from "../data/achievements";
 
 export const AboutPage: React.FC = () => {
   const { authorData } = useData();
+  const [certLightbox, setCertLightbox] = useState<number | null>(null);
+
+  const navigateCert = (direction: "prev" | "next") => {
+    if (certLightbox === null) return;
+    const total = achievements.length;
+    setCertLightbox(
+      direction === "next"
+        ? (certLightbox + 1) % total
+        : (certLightbox - 1 + total) % total
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-24">
       {/* Header & Hero Biography */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
         {/* Left: Two Editorial Portraits */}
-        <div className="lg:col-span-5 flex flex-col items-center sm:flex-row lg:flex-col gap-6">
-          <div className="relative w-64 sm:w-72 aspect-4/5 rounded-sm overflow-hidden border border-[#E0D8CB] shadow-md bg-white">
+        <div className="lg:col-span-5 flex flex-col items-center lg:items-start gap-6">
+          <div className="relative w-64 sm:w-80 aspect-[3/4] rounded-sm overflow-hidden border border-[#E0D8CB] shadow-md bg-white">
             <img
-              src={authorData.photos.portrait}
-              alt="Rishitha Gorupati in garden"
-              className="w-full h-full object-cover"
-            />
-          </div>
-          <div className="w-56 sm:w-60 aspect-square rounded-full overflow-hidden border-4 border-white shadow-md bg-white">
-            <img
-              src={authorData.photos.garden}
-              alt="Rishitha Gorupati outdoors"
-              className="w-full h-full object-cover"
+              src="/assets/author/rishitha_red_dress.jpg"
+              alt="Rishitha Gorupati"
+              className="w-full h-full object-cover object-top"
             />
           </div>
         </div>
@@ -180,6 +186,128 @@ export const AboutPage: React.FC = () => {
           </div>
         </div>
       </section>
+
+      {/* Achievements & Certificates */}
+      <section id="achievements" className="space-y-10 pt-8 border-t border-[#EFE9DD]">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs uppercase tracking-[0.2em] font-mono text-[#856E4E]">
+            Recognition &amp; Publications
+          </span>
+          <h2 className="font-serif text-3xl sm:text-4xl text-[#221E1B] font-medium">
+            Achievements &amp; Certificates
+          </h2>
+          <p className="text-xs text-[#736B61] max-w-md mx-auto">
+            Published works and recognitions received from literary publishers and organizations.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {achievements.map((achievement, idx) => (
+            <div
+              key={achievement.id}
+              className="group bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm overflow-hidden hover:border-[#856E4E] hover:shadow-md transition-all cursor-pointer"
+              onClick={() => setCertLightbox(idx)}
+            >
+              {/* Certificate Image */}
+              <div className="aspect-[4/3] overflow-hidden bg-[#F7F3EB]">
+                <img
+                  src={achievement.certificateImage}
+                  alt={achievement.title}
+                  className="w-full h-full object-contain p-3 group-hover:scale-[1.03] transition-transform duration-500"
+                />
+              </div>
+
+              {/* Details */}
+              <div className="p-5 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 text-[10px] uppercase tracking-wider font-mono font-medium rounded-xs border ${
+                    achievement.type === "publication"
+                      ? "bg-[#F4EFE6] text-[#856E4E] border-[#E5DDCF]"
+                      : "bg-[#F0EDE6] text-[#6B5E4D] border-[#DED6C6]"
+                  }`}>
+                    {achievement.type === "publication" ? "Publication" : "Appreciation"}
+                  </span>
+                  <span className="text-[10px] text-[#968D81] font-mono">{achievement.year}</span>
+                </div>
+
+                <h3 className="font-serif text-lg text-[#221E1B] font-medium leading-snug">
+                  {achievement.title}
+                </h3>
+
+                <p className="text-xs text-[#5C564E] leading-relaxed">
+                  {achievement.description}
+                </p>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-[#856E4E] font-medium">
+                    {achievement.publisher}
+                  </span>
+                  {achievement.isbn && (
+                    <span className="text-[10px] font-mono text-[#968D81]">
+                      ISBN: {achievement.isbn}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Certificate Lightbox */}
+      {certLightbox !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-[#221E1B]/90 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setCertLightbox(null)}
+        >
+          {/* Close */}
+          <button
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
+            onClick={() => setCertLightbox(null)}
+          >
+            <X className="w-5 h-5" />
+          </button>
+
+          {/* Navigate Prev */}
+          <button
+            className="absolute left-4 sm:left-8 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
+            onClick={(e) => { e.stopPropagation(); navigateCert("prev"); }}
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+
+          {/* Certificate */}
+          <div
+            className="max-w-3xl max-h-[85vh] flex flex-col items-center gap-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={achievements[certLightbox].certificateImage}
+              alt={achievements[certLightbox].title}
+              className="max-w-full max-h-[70vh] object-contain rounded-sm shadow-2xl bg-white"
+            />
+            <div className="text-center space-y-1">
+              <h4 className="font-serif text-lg text-white font-medium">
+                {achievements[certLightbox].title}
+              </h4>
+              <p className="text-sm text-white/70">
+                {achievements[certLightbox].publisher} &middot; {achievements[certLightbox].year}
+              </p>
+              <p className="text-xs text-white/50">
+                {certLightbox + 1} of {achievements.length}
+              </p>
+            </div>
+          </div>
+
+          {/* Navigate Next */}
+          <button
+            className="absolute right-4 sm:right-8 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors z-10"
+            onClick={(e) => { e.stopPropagation(); navigateCert("next"); }}
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+        </div>
+      )}
 
       {/* Creative Journey Timeline */}
       <section className="space-y-8 pt-8 border-t border-[#EFE9DD]">

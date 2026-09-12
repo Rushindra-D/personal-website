@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Send, CheckCircle2, AlertCircle, Mail, Loader2, ArrowRight } from "lucide-react";
+import { Send, CheckCircle2, AlertCircle, Mail, Loader2, Copy, ExternalLink } from "lucide-react";
 
 export const ContactForm: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -9,8 +9,9 @@ export const ContactForm: React.FC = () => {
     message: "",
   });
 
-  const [status, setStatus] = useState<"idle" | "loading" | "success" | "activation" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [statusMessage, setStatusMessage] = useState<string>("");
+  const [copied, setCopied] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,30 +39,45 @@ export const ContactForm: React.FC = () => {
 
       const data = await response.json();
 
-      if (response.ok && data.success === "true") {
+      // Strictly validate the response — no false positives
+      if (response.ok && (data.success === "true" || data.success === true)) {
         setStatus("success");
-      } else if (data.message && data.message.includes("Activation")) {
-        // FormSubmit sends a one-time verification link to the author's email
-        setStatus("activation");
-        setStatusMessage(
-          "Your message has been sent to rishithagorupati@gmail.com! FormSubmit has sent a one-time activation link to the author's inbox to authorize email forwarding."
-        );
       } else {
-        setStatus("success"); // Standard successful routing
+        // API returned an error or activation is needed
+        const needsActivation = data.message && data.message.toLowerCase().includes("activation");
+        setStatus("error");
+        setStatusMessage(
+          needsActivation
+            ? "The contact form needs a one-time activation by the author. Please use one of the direct options below to send your message."
+            : "The message could not be delivered automatically. Please use one of the direct options below to send your message."
+        );
       }
     } catch {
       setStatus("error");
       setStatusMessage(
-        "Could not deliver automatically due to a connection issue. You can send it directly through your email client using the button below."
+        "Could not connect to the email service. Please use one of the direct options below to send your message."
       );
     }
   };
 
+  const subjectText = formData.subject || "Inquiry for Rishitha Gorupati";
+  const bodyText = `From: ${formData.name} (${formData.email})\n\nMessage:\n${formData.message}`;
+
   const mailtoHref = `mailto:rishithagorupati@gmail.com?subject=${encodeURIComponent(
-    formData.subject || "Inquiry for Rishitha Gorupati"
-  )}&body=${encodeURIComponent(
-    `From: ${formData.name} (${formData.email})\n\nMessage:\n${formData.message}`
-  )}`;
+    subjectText
+  )}&body=${encodeURIComponent(bodyText)}`;
+
+  const gmailHref = `https://mail.google.com/mail/?view=cm&to=rishithagorupati@gmail.com&su=${encodeURIComponent(
+    subjectText
+  )}&body=${encodeURIComponent(bodyText)}`;
+
+  const handleCopyMessage = () => {
+    const text = `To: rishithagorupati@gmail.com\nSubject: ${subjectText}\n\n${bodyText}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  };
 
   return (
     <div className="bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm p-8 sm:p-12 shadow-sm">
@@ -69,10 +85,10 @@ export const ContactForm: React.FC = () => {
         <div className="text-center py-8 space-y-4 animate-fadeIn">
           <CheckCircle2 className="w-12 h-12 text-[#856E4E] mx-auto" />
           <h3 className="font-serif text-2xl sm:text-3xl text-[#221E1B] font-medium">
-            Message Sent Directly to Rishitha
+            Message Sent to Rishitha
           </h3>
           <p className="font-serif italic text-base text-[#5C564E] max-w-md mx-auto leading-relaxed">
-            Thank you for reaching out, <span className="text-[#221E1B] font-medium">{formData.name}</span>. Your response has been dispatched to{" "}
+            Thank you for reaching out, <span className="text-[#221E1B] font-medium">{formData.name}</span>. Your message has been delivered to{" "}
             <span className="font-mono text-[#856E4E]">rishithagorupati@gmail.com</span>. Rishitha will review your message and reply to{" "}
             <span className="font-mono text-[#221E1B]">{formData.email}</span> shortly.
           </p>
@@ -85,52 +101,50 @@ export const ContactForm: React.FC = () => {
               }}
               className="px-6 py-2.5 border border-[#856E4E] text-xs uppercase tracking-widest text-[#856E4E] hover:bg-[#856E4E] hover:text-white transition-colors rounded-sm"
             >
-              Send Another Response
-            </button>
-          </div>
-        </div>
-      ) : status === "activation" ? (
-        <div className="text-center py-8 space-y-4 animate-fadeIn">
-          <div className="w-12 h-12 rounded-full bg-[#F4EFE6] border border-[#D5C7B2] flex items-center justify-center text-[#856E4E] mx-auto">
-            <Mail className="w-6 h-6" />
-          </div>
-          <h3 className="font-serif text-2xl sm:text-3xl text-[#221E1B] font-medium">
-            Message Forwarded to Author
-          </h3>
-          <p className="font-serif text-sm sm:text-base text-[#5C564E] max-w-md mx-auto leading-relaxed">
-            {statusMessage}
-          </p>
-          <div className="p-4 bg-[#F7F3EB] border border-[#E0D8CB] rounded-sm text-xs text-[#736B61] max-w-md mx-auto text-left space-y-1">
-            <p className="font-medium text-[#221E1B]">Note for Rishitha:</p>
-            <p>
-              Please check your Gmail inbox (<span className="font-mono">rishithagorupati@gmail.com</span>) for an email from <strong>FormSubmit</strong> and click <em>&ldquo;Activate Form&rdquo;</em> once. After this quick 1-click confirmation, all future messages will flow directly into your inbox.
-            </p>
-          </div>
-          <div className="pt-2">
-            <button
-              onClick={() => {
-                setStatus("idle");
-                setFormData({ name: "", email: "", subject: "", message: "" });
-              }}
-              className="px-6 py-2 border border-[#856E4E] text-xs uppercase tracking-widest text-[#856E4E] hover:bg-[#856E4E] hover:text-white transition-colors rounded-sm"
-            >
-              Done
+              Send Another Message
             </button>
           </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-6">
           {status === "error" && (
-            <div className="p-4 bg-[#FDF2F2] border border-[#E8C5C5] rounded-sm flex items-start space-x-3 text-xs text-[#9B2C2C]">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#C53030]" />
-              <div className="space-y-2 flex-1">
-                <p>{statusMessage}</p>
-                <a
-                  href={mailtoHref}
-                  className="inline-flex items-center text-xs font-semibold text-[#856E4E] hover:underline"
-                >
-                  Send using your default mail app <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                </a>
+            <div className="p-5 bg-[#FDF8F2] border border-[#E5DDCF] rounded-sm space-y-4">
+              <div className="flex items-start space-x-3 text-xs text-[#5C564E]">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#856E4E]" />
+                <p className="leading-relaxed">{statusMessage}</p>
+              </div>
+
+              {/* Direct send alternatives always available */}
+              <div className="space-y-2 pt-1">
+                <p className="text-[11px] font-mono uppercase tracking-wider text-[#856E4E]">
+                  Direct Contact Options:
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <a
+                    href={gmailHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-4 py-2.5 bg-[#221E1B] text-[#FDFBF7] text-[11px] uppercase tracking-[0.14em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 mr-2" />
+                    Open in Gmail
+                  </a>
+                  <a
+                    href={mailtoHref}
+                    className="inline-flex items-center px-4 py-2.5 border border-[#D5C7B2] bg-white text-[#4B453E] text-[11px] uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
+                    Open in Mail App
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyMessage}
+                    className="inline-flex items-center px-4 py-2.5 border border-[#D5C7B2] bg-white text-[#4B453E] text-[11px] uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] transition-colors"
+                  >
+                    <Copy className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
+                    {copied ? "Copied!" : "Copy Email / Message"}
+                  </button>
+                </div>
               </div>
             </div>
           )}
@@ -229,7 +243,6 @@ export const ContactForm: React.FC = () => {
             </button>
 
             <div className="flex items-center space-x-2 text-xs text-[#736B61]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
               <span>
                 Delivers to <strong className="text-[#221E1B]">rishithagorupati@gmail.com</strong>
               </span>

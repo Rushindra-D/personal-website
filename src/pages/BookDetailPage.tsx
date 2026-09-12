@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, ShoppingBag, ExternalLink, BookOpen, Feather } from "lucide-react";
+import { ArrowLeft, ShoppingBag, ExternalLink, Feather } from "lucide-react";
 import { useData } from "../context/DataContext";
 
 export const BookDetailPage: React.FC = () => {
@@ -144,16 +144,6 @@ export const BookDetailPage: React.FC = () => {
                 <ExternalLink className="w-3.5 h-3.5 ml-2 opacity-70" />
               </a>
 
-              <a
-                href={book.buyLinks.flipkart}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-7 py-3 bg-[#FDFBF7] text-[#736B61] border border-[#DCD5C9] text-xs uppercase tracking-[0.16em] font-medium rounded-sm hover:bg-[#EFE9DD] hover:text-[#221E1B] transition-colors"
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Flipkart
-                <span className="ml-2 text-[10px] text-[#968D81] font-mono">[Placeholder]</span>
-              </a>
             </div>
 
             {book.buyLinks.amazonAlt && (

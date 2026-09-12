@@ -12,14 +12,25 @@ export const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
           {/* Brand & Mission */}
           <div className="space-y-4">
-            <Link to="/" className="inline-block">
-              <span className="font-serif text-2xl font-medium tracking-tight text-[#221E1B]">
-                {authorData.name}
-              </span>
-            </Link>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#736B61]">
-              Author • Poet • Writer
-            </p>
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-white shadow-md shrink-0">
+                <img
+                  src="/assets/author/rishitha_casual.jpg"
+                  alt="Rishitha Gorupati"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div>
+                <Link to="/" className="inline-block">
+                  <span className="font-serif text-2xl font-medium tracking-tight text-[#221E1B]">
+                    {authorData.name}
+                  </span>
+                </Link>
+                <p className="text-xs uppercase tracking-[0.2em] text-[#736B61]">
+                  Author • Poet • Writer
+                </p>
+              </div>
+            </div>
             <p className="font-serif italic text-sm text-[#5C564E] max-w-sm leading-relaxed pt-2">
               &ldquo;{authorData.tagline}&rdquo;
             </p>
@@ -49,6 +60,11 @@ export const Footer: React.FC = () => {
               <li>
                 <Link to="/books" className="hover:text-[#221E1B] transition-colors">
                   Books
+                </Link>
+              </li>
+              <li>
+                <Link to="/achievements" className="hover:text-[#221E1B] transition-colors">
+                  Achievements
                 </Link>
               </li>
               <li>

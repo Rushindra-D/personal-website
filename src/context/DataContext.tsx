@@ -30,7 +30,7 @@ interface DataContextType {
   importDataJson: (jsonString: string) => boolean;
 }
 
-const STORAGE_KEY = "rishitha_site_data_v2";
+const STORAGE_KEY = "rishitha_site_data_v3";
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 

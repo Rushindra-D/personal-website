@@ -17,7 +17,7 @@ export const MusingsPage: React.FC = () => {
     date: "March 2026",
     readTime: "6 min read",
     category: "Psychological Inquiry & Art",
-    coverImage: "/images/artworks/zentangle-1.jpg",
+    coverImage: "/assets/sketches/sketch_pattern_grid.jpg",
     content: []
   };
 
@@ -33,10 +33,10 @@ export const MusingsPage: React.FC = () => {
           Musings
         </h1>
         <p className="font-serif italic text-base sm:text-xl text-[#5C564E] max-w-2xl mx-auto leading-relaxed">
-          &ldquo;Where quiet reflections meet psychological inquiry, structured art, and the intricate workings of the human mind.&rdquo;
+          &ldquo;A collection of thoughts and ideas that offer new perspectives and something to learn.&rdquo;
         </p>
         <p className="text-xs text-[#736B61] max-w-xl mx-auto leading-relaxed">
-          Explore long-form essays, introspective journals, and creative studies by Rishitha Gorupati connecting art, thought patterns, and inner clarity.
+          Explore journals and writings that look at different subjects, ideas, and experiences from a fresh perspective.
         </p>
       </div>
 
@@ -91,7 +91,7 @@ export const MusingsPage: React.FC = () => {
                 className="inline-flex items-center px-5 py-3 border border-[#D5C7B2] bg-white text-[#4B453E] text-xs uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] hover:text-[#221E1B] transition-colors"
               >
                 <Eye className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
-                View 5 Zentangle Sketches
+                View {artworks.length} Zentangle Sketches
               </button>
             </div>
           </div>
@@ -101,8 +101,11 @@ export const MusingsPage: React.FC = () => {
             <div className="relative group cursor-pointer" onClick={() => setLightboxIndex(0)}>
               <div className="aspect-[4/3] rounded-sm overflow-hidden border border-[#EAE3D6] shadow-md bg-white p-2">
                 <img
-                  src={featuredMusing.coverImage}
+                  src={featuredMusing.coverImage || "/assets/sketches/sketch_nested_vortex.jpg"}
                   alt="Zentangle Fractal Study"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/assets/sketches/sketch_nested_vortex.jpg";
+                  }}
                   className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
                 />
               </div>
@@ -195,7 +198,7 @@ export const MusingsPage: React.FC = () => {
           Contemplations &amp; Future Inquiries
         </h3>
         <p className="font-serif text-sm text-[#5C564E] leading-relaxed">
-          Musings serves as Rishitha Gorupati&apos;s literary and contemplative journal — examining psychology, structured pattern therapy, personal philosophy, and reflections drawn from everyday moments.
+          A collection of journals exploring different ideas, subjects, and experiences. Each piece offers a perspective shaped by curiosity, observation, and reflection. These writings invite you to pause, think differently, and discover something new along the way.
         </p>
         <p className="text-xs text-[#856E4E] font-medium">
           New journals and philosophical essays are added periodically.
