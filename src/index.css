@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-body: "Newsreader", Georgia, serif;
+  --font-sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --color-paper-50: #FDFBF7;
+  --color-paper-100: #F7F3EB;
+  --color-paper-200: #EFE9DD;
+  --color-paper-300: #E5DDCF;
+  --color-ink-900: #221E1B;
+  --color-ink-800: #342F2A;
+  --color-ink-700: #4B453E;
+  --color-ink-500: #736B61;
+  --color-ink-400: #968D81;
+  --color-bronze-600: #856E4E;
+  --color-bronze-500: #9E8462;
+  --color-bronze-400: #B89F7B;
+}
+
+/* Base custom styles for literary reading atmosphere */
+html {
+  background-color: #FDFBF7;
+  color: #221E1B;
+  font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom editorial poem line styling */
+.poem-content {
+  font-family: "Newsreader", "Cormorant Garamond", Georgia, serif;
+  line-height: 1.85;
+  white-space: pre-line;
+  letter-spacing: 0.015em;
+}
+
+/* Subtle custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FDFBF7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #E5DDCF;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B89F7B;
+}
