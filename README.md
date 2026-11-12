@@ -190,11 +190,17 @@ After adding or changing environment variables in Vercel:
 
 ---
 
-## 🔐 Author Portal Access
+## 🔐 Author Portal Access & Permanent Journal Publishing
 
 * **URL**: `/admin`
-* **Default Passkey**: `rishitha` (or customized via Author Profile > Security)
-* Full dynamic control over site content with local persistence and backup/restore capabilities.
+* **Server-Verified Authentication**: Set `ADMIN_PASSKEY` in Vercel Environment Variables (and `.env.local` for local dev).
+* **Permanent Publishing (GitHub Auto-Commit)**:
+  1. Create a **GitHub Fine-grained Personal Access Token** (`Settings` → `Developer settings` → `Personal access tokens` → `Fine-grained tokens`).
+  2. Scope it to only the `personal-website` repository and grant **Repository permissions → Contents: Read and write**.
+  3. In **Vercel Dashboard → Settings → Environment Variables**, add:
+     * `ADMIN_PASSKEY` = your chosen secret passkey
+     * `GITHUB_TOKEN` = your GitHub token
+  4. Redeploy once. From then on, publishing, editing, or deleting a journal in `/admin` commits straight to `src/data/journals.json` and redeploys globally across all devices in ~1 minute.
 
 ---
 

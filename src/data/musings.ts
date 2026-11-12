@@ -1,4 +1,5 @@
 import { artworks, type Artwork } from "./artworks";
+import publishedJournals from "./journals.json";
 
 export interface MusingSection {
   heading?: string;
@@ -24,7 +25,7 @@ export interface JournalEntry {
   concludingReflection: string;
 }
 
-export const musings: JournalEntry[] = [
+export const BUILT_IN_MUSINGS: JournalEntry[] = [
   {
     id: "fractals-of-thought",
     slug: "fractals-of-thought",
@@ -96,4 +97,9 @@ export const musings: JournalEntry[] = [
       "Perhaps, we are not merely drawing patterns on paper, but revealing the thoughts within us, and in doing so, we find clarity after finishing the art in the same way we find a solution after thinking. And maybe, in understanding these patterns, we begin to understand ourselves.",
     sketches: artworks
   }
+];
+
+export const musings: JournalEntry[] = [
+  ...(publishedJournals as JournalEntry[]),
+  ...BUILT_IN_MUSINGS,
 ];

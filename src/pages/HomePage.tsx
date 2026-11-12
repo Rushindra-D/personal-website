@@ -11,8 +11,9 @@ import { Timeline } from "../components/Timeline";
 import { useData } from "../context/DataContext";
 
 export const HomePage: React.FC = () => {
-  const { authorData, poems, books } = useData();
+  const { authorData, poems, books, musings } = useData();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const featuredMusing = musings[0];
 
   const featuredPoems = poems.filter((p) => p.featured).slice(0, 4);
   const featuredArtworks = artworks.slice(0, 3);
@@ -207,25 +208,27 @@ Forever and ever..`}
         </div>
 
         {/* Featured Musing Card Banner */}
-        <div className="bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-center justify-between">
-          <div className="space-y-2 max-w-2xl">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[#856E4E] bg-[#F7F3EB] px-2.5 py-1 rounded-xs border border-[#E5DDCF]">
-              Featured Journal Entry
-            </span>
-            <h3 className="font-serif text-2xl sm:text-3xl text-[#221E1B] font-medium">
-              Fractals of Thought: A Psychological Inquiry into Zentangle Practice
-            </h3>
-            <p className="font-serif italic text-sm text-[#5C564E]">
-              An exploration into how structured, repetitive pattern drawings reveal non-linear thoughts and bring psychological relief.
-            </p>
+        {featuredMusing && (
+          <div className="bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm p-6 sm:p-8 flex flex-col md:flex-row gap-6 items-center justify-between">
+            <div className="space-y-2 max-w-2xl">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-[#856E4E] bg-[#F7F3EB] px-2.5 py-1 rounded-xs border border-[#E5DDCF]">
+                Featured Journal Entry
+              </span>
+              <h3 className="font-serif text-2xl sm:text-3xl text-[#221E1B] font-medium">
+                {featuredMusing.title}
+              </h3>
+              <p className="font-serif italic text-sm text-[#5C564E]">
+                {featuredMusing.subtitle || featuredMusing.excerpt}
+              </p>
+            </div>
+            <Link
+              to={`/musings/${featuredMusing.slug}`}
+              className="shrink-0 px-6 py-3 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-[0.16em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
+            >
+              Read Journal
+            </Link>
           </div>
-          <Link
-            to="/musings/fractals-of-thought"
-            className="shrink-0 px-6 py-3 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-[0.16em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
-          >
-            Read Journal
-          </Link>
-        </div>
+        )}
 
         {/* Sketches Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">

@@ -12,7 +12,7 @@ export const MusingDetailPage: React.FC = () => {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const musing = musings.find((m) => m.slug === slug || m.id === slug) || musings[0];
+  const musing = musings.find((m) => m.slug === slug || m.id === slug);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -100,9 +100,11 @@ export const MusingDetailPage: React.FC = () => {
               {musing.title}
             </h1>
 
-            <p className="font-serif italic text-lg sm:text-xl text-[#5C564E] max-w-2xl mx-auto leading-relaxed">
-              &ldquo;{musing.subtitle}&rdquo;
-            </p>
+            {musing.subtitle && (
+              <p className="font-serif italic text-lg sm:text-xl text-[#5C564E] max-w-2xl mx-auto leading-relaxed">
+                &ldquo;{musing.subtitle}&rdquo;
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-[#736B61] pt-2">
               <span className="font-serif font-medium text-[#221E1B]">By {musing.author || "Rishitha Gorupati"}</span>
@@ -143,7 +145,7 @@ export const MusingDetailPage: React.FC = () => {
                     ))}
                     {section.featuredQuote && (
                       <blockquote className="border-l-2 border-[#856E4E] pl-6 py-3 my-4 bg-[#F7F3EB]/60 italic font-serif text-lg">
-                        &ldquo;{section.featuredQuote}&rdquo;
+                        &ldquo;{section.featuredQuote.replace(/^[\u201C"]|[\u201D"]$/g, "")}&rdquo;
                       </blockquote>
                     )}
                   </div>

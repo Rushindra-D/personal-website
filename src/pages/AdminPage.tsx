@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   Lock,
@@ -18,11 +18,17 @@ import {
   Search,
   X,
   Save,
+  Copy,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Poem } from "../data/poems";
 import type { Book } from "../data/books";
-import type { JournalEntry } from "../data/musings";
+import { BUILT_IN_MUSINGS, type JournalEntry } from "../data/musings";
+
+const BUILT_IN_MUSING_IDS = new Set(BUILT_IN_MUSINGS.map((m) => m.id));
 
 export const AdminPage: React.FC = () => {
   const {
@@ -39,18 +45,27 @@ export const AdminPage: React.FC = () => {
     addMusing,
     updateMusing,
     deleteMusing,
+    syncPublishedJournals,
     updateAuthor,
     resetToDefaults,
     exportDataJson,
     importDataJson,
   } = useData();
 
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem("author_admin_auth") === "true";
-  });
+  // Authentication & GitHub Publishing State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [passwordInput, setPasswordInput] = useState("");
-  const [authError, setAuthError] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [githubConfigured, setGithubConfigured] = useState(false);
+  const [isSyncingGitHub, setIsSyncingGitHub] = useState(false);
+  const [isPublishingMusing, setIsPublishingMusing] = useState(false);
+  const [musingError, setMusingError] = useState<string | null>(null);
+  const [lastPublishInfo, setLastPublishInfo] = useState<{
+    message: string;
+    commitUrl?: string;
+  } | null>(null);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<"dashboard" | "poems" | "books" | "musings" | "profile" | "backup">("dashboard");
@@ -58,10 +73,10 @@ export const AdminPage: React.FC = () => {
   // Notifications
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
 
-  const showBanner = (msg: string) => {
+  const showBanner = useCallback((msg: string) => {
     setBannerMessage(msg);
-    setTimeout(() => setBannerMessage(null), 3500);
-  };
+    setTimeout(() => setBannerMessage(null), 4000);
+  }, []);
 
   // --- POEM MODAL STATE ---
   const [editingPoemId, setEditingPoemId] = useState<string | null>(null);
@@ -128,66 +143,126 @@ export const AdminPage: React.FC = () => {
     gardenPhoto: authorData.photos.garden,
   });
 
-  // --- PASSKEY STATE ---
-  const [newPasskey, setNewPasskey] = useState("");
-  const [confirmPasskey, setConfirmPasskey] = useState("");
-  const [passkeyFeedback, setPasskeyFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
-
-  // Handle Login
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const customPasskey = localStorage.getItem("author_custom_passkey");
-    const entered = passwordInput.trim();
-    const valid =
-      (customPasskey && entered === customPasskey) ||
-      entered === "rishitha" ||
-      entered === "author2026";
-
-    if (valid) {
-      setIsAuthenticated(true);
-      localStorage.setItem("author_admin_auth", "true");
-      setAuthError(false);
-      showBanner("Welcome back, Rishitha!");
-    } else {
-      setAuthError(true);
+  const syncFromGitHub = useCallback(async (silent = false) => {
+    setIsSyncingGitHub(true);
+    try {
+      const response = await fetch("/api/journals", {
+        method: "GET",
+        credentials: "include",
+      });
+      if (response.status === 401) {
+        setIsAuthenticated(false);
+        return;
+      }
+      const data = (await response.json()) as { journals?: JournalEntry[]; error?: string };
+      if (!response.ok) {
+        if (!silent) {
+          showBanner(data.error || "Unable to refresh journals from GitHub.");
+        }
+        return;
+      }
+      if (Array.isArray(data.journals)) {
+        syncPublishedJournals(data.journals, false);
+        if (!silent) {
+          showBanner("Synced latest published journals from GitHub.");
+        }
+      }
+    } catch {
+      if (!silent) {
+        showBanner("Unable to reach GitHub sync service.");
+      }
+    } finally {
+      setIsSyncingGitHub(false);
     }
-  };
+  }, [showBanner, syncPublishedJournals]);
 
-  const handleUpdatePasskey = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newPasskey.trim()) {
-      setPasskeyFeedback({ type: "error", msg: "Passkey cannot be empty." });
-      return;
-    }
-    if (newPasskey !== confirmPasskey) {
-      setPasskeyFeedback({ type: "error", msg: "Passkeys do not match." });
-      return;
-    }
-    if (newPasskey.length < 4) {
-      setPasskeyFeedback({ type: "error", msg: "Passkey must be at least 4 characters long." });
-      return;
-    }
-    localStorage.setItem("author_custom_passkey", newPasskey.trim());
-    setPasskeyFeedback({
-      type: "success",
-      msg: `Passkey updated successfully! Use "${newPasskey}" next time you log in.`,
-    });
-    setNewPasskey("");
-    setConfirmPasskey("");
-    showBanner("Admin passkey successfully updated!");
-  };
-
-  const handleResetPasskey = () => {
-    if (window.confirm("Reset passkey back to default ('rishitha')?")) {
-      localStorage.removeItem("author_custom_passkey");
-      setPasskeyFeedback({ type: "success", msg: "Passkey reset to default ('rishitha')." });
-      showBanner("Passkey reset to default ('rishitha').");
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  // Verify server session on mount
+  useEffect(() => {
     localStorage.removeItem("author_admin_auth");
+    localStorage.removeItem("author_custom_passkey");
+
+    let cancelled = false;
+    const checkSession = async () => {
+      try {
+        const response = await fetch("/api/admin-auth", {
+          method: "GET",
+          credentials: "include",
+        });
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          authenticated?: boolean;
+          githubConfigured?: boolean;
+        };
+        if (cancelled) return;
+        setGithubConfigured(Boolean(data.githubConfigured));
+        setIsAuthenticated(Boolean(data.authenticated));
+        if (data.authenticated && data.githubConfigured) {
+          await syncFromGitHub(true);
+        }
+      } catch {
+        // Ignore offline/network check error
+      } finally {
+        if (!cancelled) setIsCheckingAuth(false);
+      }
+    };
+
+    checkSession();
+    return () => {
+      cancelled = true;
+    };
+  }, [syncFromGitHub]);
+
+  // Handle Server-Verified Login
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    setIsLoggingIn(true);
+
+    try {
+      const response = await fetch("/api/admin-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ passkey: passwordInput.trim() }),
+      });
+
+      const data = (await response.json()) as {
+        authenticated?: boolean;
+        githubConfigured?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok || !data.authenticated) {
+        setAuthError(data.error || "Incorrect passkey. Please try again.");
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setGithubConfigured(Boolean(data.githubConfigured));
+      setPasswordInput("");
+      setAuthError(null);
+      showBanner("Welcome back, Rishitha!");
+
+      if (data.githubConfigured) {
+        await syncFromGitHub(true);
+      }
+    } catch {
+      setAuthError("Unable to reach authentication service. Please try again.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/admin-auth", {
+        method: "DELETE",
+        credentials: "include",
+      });
+    } catch {
+      // ignore
+    }
+    setIsAuthenticated(false);
   };
 
   // --- POEM ACTIONS ---
@@ -341,8 +416,42 @@ export const AdminPage: React.FC = () => {
   };
 
   // --- MUSING ACTIONS ---
+  const parseMusingSections = (bodyText: string) => {
+    const blocks = bodyText
+      .replace(/\r\n/g, "\n")
+      .split(/\n\s*\n/)
+      .map((b) => b.trim())
+      .filter(Boolean);
+
+    const sections: JournalEntry["sections"] = [];
+    let current: JournalEntry["sections"][number] = { paragraphs: [] };
+
+    for (const block of blocks) {
+      if (block.startsWith("### ")) {
+        if (current.heading || current.paragraphs.length > 0) {
+          sections.push(current);
+        }
+        const [headingLine, ...rest] = block.split("\n");
+        const firstParagraph = rest.join("\n").trim();
+        current = {
+          heading: headingLine.slice(4).trim(),
+          paragraphs: firstParagraph ? [firstParagraph] : [],
+        };
+      } else {
+        current.paragraphs.push(block);
+      }
+    }
+
+    if (current.heading || current.paragraphs.length > 0) {
+      sections.push(current);
+    }
+
+    return sections.length > 0 ? sections : [{ paragraphs: [] }];
+  };
+
   const openNewMusing = () => {
     setEditingMusingId(null);
+    setMusingError(null);
     setMusingForm({
       title: "",
       slug: "",
@@ -359,6 +468,7 @@ export const AdminPage: React.FC = () => {
 
   const openEditMusing = (musing: JournalEntry) => {
     setEditingMusingId(musing.id);
+    setMusingError(null);
     const bodyText = musing.sections
       .map((s) => (s.heading ? `### ${s.heading}\n` : "") + s.paragraphs.join("\n\n"))
       .join("\n\n");
@@ -377,49 +487,165 @@ export const AdminPage: React.FC = () => {
     setMusingModalOpen(true);
   };
 
-  const saveMusing = (e: React.FormEvent) => {
+  const saveMusing = async (e: React.FormEvent) => {
     e.preventDefault();
-    const slug =
+    setMusingError(null);
+
+    const rawSlug =
       musingForm.slug.trim() ||
       musingForm.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "");
+    const slug = rawSlug || `journal-${Date.now()}`;
 
-    const paragraphs = musingForm.bodyText
-      .split("\n\n")
-      .map((p) => p.trim())
-      .filter(Boolean);
+    const sections = parseMusingSections(musingForm.bodyText);
+    const firstParagraph = sections.flatMap((s) => s.paragraphs)[0] || "";
+    const existing = editingMusingId ? musings.find((m) => m.id === editingMusingId) : undefined;
 
     const musingPayload: Omit<JournalEntry, "id"> = {
       slug,
       title: musingForm.title.trim(),
       subtitle: musingForm.subtitle.trim(),
-      category: musingForm.category.trim(),
-      date: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-      readTime: musingForm.readTime.trim(),
-      author: musingForm.author.trim(),
-      excerpt: musingForm.excerpt.trim() || musingForm.subtitle,
-      coverImage: "/assets/sketches/sketch_geometric_spiral.jpg",
-      tags: ["Journal", "Psychology", "Reflections"],
-      sections: [
-        {
-          paragraphs,
-        },
-      ],
-      sketches: musings[0]?.sketches || [],
+      category: musingForm.category.trim() || "Reflections",
+      date: existing?.date || new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
+      readTime: musingForm.readTime.trim() || "4 min read",
+      author: musingForm.author.trim() || "Rishitha Gorupati",
+      excerpt:
+        musingForm.excerpt.trim() ||
+        musingForm.subtitle.trim() ||
+        (firstParagraph.length > 180 ? `${firstParagraph.slice(0, 180)}...` : firstParagraph),
+      coverImage: existing?.coverImage || "/assets/sketches/sketch_geometric_spiral.jpg",
+      tags: existing?.tags || ["Journal", "Reflections"],
+      sections,
+      sketches: existing?.sketches || [],
       concludingReflection: musingForm.concludingReflection.trim(),
     };
 
+    const isBuiltIn = Boolean(editingMusingId && BUILT_IN_MUSING_IDS.has(editingMusingId));
+
+    if (githubConfigured && !isBuiltIn) {
+      setIsPublishingMusing(true);
+      try {
+        const response = await fetch("/api/journals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            journal: {
+              ...musingPayload,
+              id: editingMusingId || slug,
+            },
+            mode: editingMusingId ? "update" : "create",
+            targetId: editingMusingId || undefined,
+          }),
+        });
+
+        const data = (await response.json()) as {
+          journals?: JournalEntry[];
+          commitUrl?: string;
+          error?: string;
+        };
+
+        if (response.status === 401) {
+          setIsAuthenticated(false);
+          setMusingModalOpen(false);
+          setAuthError(data.error || "Session expired. Please log in again.");
+          return;
+        }
+
+        if (!response.ok || !Array.isArray(data.journals)) {
+          setMusingError(data.error || "Unable to publish journal to GitHub.");
+          return;
+        }
+
+        syncPublishedJournals(data.journals, true);
+        const actionMsg = editingMusingId
+          ? `Updated "${musingForm.title}" on GitHub! Live site updates in ~1 minute.`
+          : `Published "${musingForm.title}" to GitHub! Live site updates in ~1 minute.`;
+        setLastPublishInfo({ message: actionMsg, commitUrl: data.commitUrl });
+        showBanner(actionMsg);
+        setMusingModalOpen(false);
+        return;
+      } catch {
+        setMusingError("Network error while publishing to GitHub. Please try again.");
+        return;
+      } finally {
+        setIsPublishingMusing(false);
+      }
+    }
+
     if (editingMusingId) {
       updateMusing(editingMusingId, musingPayload);
-      showBanner(`Journal "${musingForm.title}" updated.`);
+      showBanner(`Journal "${musingForm.title}" updated in browser preview.`);
     } else {
       addMusing(musingPayload);
-      showBanner(`New Journal "${musingForm.title}" published!`);
+      showBanner(`Draft "${musingForm.title}" saved to browser preview!`);
     }
 
     setMusingModalOpen(false);
+  };
+
+  const handleDeleteMusing = async (m: JournalEntry) => {
+    if (BUILT_IN_MUSING_IDS.has(m.id)) return;
+
+    const confirmMsg = githubConfigured
+      ? `Delete "${m.title}" permanently from your live website and GitHub repository?`
+      : `Delete draft journal "${m.title}"?`;
+
+    if (!window.confirm(confirmMsg)) return;
+
+    if (!githubConfigured) {
+      deleteMusing(m.id);
+      showBanner("Draft journal deleted.");
+      return;
+    }
+
+    setIsSyncingGitHub(true);
+    try {
+      const response = await fetch("/api/journals", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: m.id }),
+      });
+
+      const data = (await response.json()) as {
+        journals?: JournalEntry[];
+        commitUrl?: string;
+        error?: string;
+      };
+
+      if (response.status === 401) {
+        setIsAuthenticated(false);
+        setAuthError(data.error || "Session expired. Please log in again.");
+        return;
+      }
+
+      if (!response.ok || !Array.isArray(data.journals)) {
+        showBanner(data.error || "Failed to delete journal from GitHub.");
+        return;
+      }
+
+      syncPublishedJournals(data.journals, true);
+      const msg = `Removed "${m.title}" from GitHub! Live site updates in ~1 minute.`;
+      setLastPublishInfo({ message: msg, commitUrl: data.commitUrl });
+      showBanner(msg);
+    } catch {
+      showBanner("Network error while deleting journal from GitHub.");
+    } finally {
+      setIsSyncingGitHub(false);
+    }
+  };
+
+  const copyMusingCode = async (musing: JournalEntry) => {
+    const code = `${JSON.stringify(musing, null, 2)},`;
+    try {
+      await navigator.clipboard.writeText(code);
+      showBanner(`Copied "${musing.title}" JSON snippet!`);
+    } catch {
+      window.prompt("Copy this journal entry JSON:", code);
+    }
   };
 
   // --- PROFILE ACTIONS ---
@@ -494,6 +720,17 @@ export const AdminPage: React.FC = () => {
   );
 
   // LOGIN SCREEN
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center px-4 py-16">
+        <div className="flex items-center space-x-2 text-xs uppercase tracking-widest font-mono text-[#736B61]">
+          <Loader2 className="w-4 h-4 animate-spin text-[#856E4E]" />
+          <span>Verifying author session...</span>
+        </div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     return (
       <div className="min-h-[75vh] flex items-center justify-center px-4 py-16">
@@ -507,7 +744,7 @@ export const AdminPage: React.FC = () => {
               Author Portal
             </h1>
             <p className="font-serif italic text-sm text-[#736B61]">
-              Enter author credentials to edit poems, books, journals, and bio.
+              Enter author credentials to publish journals permanently and manage site content.
             </p>
           </div>
 
@@ -519,25 +756,37 @@ export const AdminPage: React.FC = () => {
               <input
                 type="password"
                 required
+                disabled={isLoggingIn}
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Enter author passkey..."
-                className="w-full px-4 py-3 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm text-[#221E1B] focus:outline-none focus:border-[#856E4E] focus:ring-1 focus:ring-[#856E4E] transition-all"
+                className="w-full px-4 py-3 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm text-[#221E1B] focus:outline-none focus:border-[#856E4E] focus:ring-1 focus:ring-[#856E4E] transition-all disabled:opacity-60"
               />
             </div>
 
             {authError && (
-              <p className="text-xs text-[#C53030]">
-                Incorrect passkey. Please try again.
-              </p>
+              <div className="p-3 bg-red-50 border border-red-200 rounded-sm text-xs text-[#C53030] flex items-start space-x-2">
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                <span>{authError}</span>
+              </div>
             )}
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-[0.18em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors flex items-center justify-center space-x-2"
+              disabled={isLoggingIn}
+              className="w-full py-3 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-[0.18em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors flex items-center justify-center space-x-2 disabled:opacity-60"
             >
-              <Unlock className="w-4 h-4" />
-              <span>Enter Portal</span>
+              {isLoggingIn ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Verifying...</span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-4 h-4" />
+                  <span>Enter Portal</span>
+                </>
+              )}
             </button>
           </form>
 
@@ -599,7 +848,7 @@ export const AdminPage: React.FC = () => {
           { key: "dashboard", label: "Overview", icon: Sparkles },
           { key: "poems", label: `Poems (${poems.length})`, icon: Feather },
           { key: "books", label: `Books (${books.length})`, icon: BookOpen },
-          { key: "musings", label: `Musings (${musings.length})`, icon: Feather },
+          { key: "musings", label: `Journals / Musings (${musings.length})`, icon: Feather },
           { key: "profile", label: "Author Profile", icon: User },
           { key: "backup", label: "Backup & Sync", icon: Download },
         ].map((tab) => {
@@ -701,11 +950,24 @@ export const AdminPage: React.FC = () => {
 
           {/* Dynamic Persistence Information */}
           <div className="p-6 bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm space-y-2">
-            <h4 className="font-serif text-lg font-medium text-[#221E1B]">
-              Real-Time Dynamic Synchronization
-            </h4>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h4 className="font-serif text-lg font-medium text-[#221E1B]">
+                Permanent GitHub Auto-Commit Publishing (Journals)
+              </h4>
+              <span
+                className={`text-[10px] font-mono uppercase tracking-wider px-2.5 py-1 rounded border ${
+                  githubConfigured
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : "bg-amber-50 text-amber-800 border-amber-200"
+                }`}
+              >
+                {githubConfigured ? "GitHub Connected" : "Local Draft Mode"}
+              </span>
+            </div>
             <p className="font-serif text-sm text-[#5C564E] leading-relaxed">
-              Every poem you write, book you add, or profile edit you make here updates your website immediately without needing to re-compile code. Everything is stored persistently in your browser and automatically exported to your backup file anytime.
+              {githubConfigured
+                ? "New journals, edits, and deletions are committed directly to src/data/journals.json on GitHub and automatically deploy across all devices in ~1 minute. Poems, books, and profile edits save as browser previews unless backed up/committed."
+                : "Set GITHUB_TOKEN and ADMIN_PASSKEY in Vercel Environment Variables (or .env.local) to enable one-click permanent publishing for journals across all devices."}
             </p>
           </div>
         </div>
@@ -874,63 +1136,145 @@ export const AdminPage: React.FC = () => {
       {/* TAB 4: MUSINGS & JOURNALS */}
       {activeTab === "musings" && (
         <div className="space-y-6 animate-fadeIn">
-          <div className="flex justify-between items-center">
-            <h3 className="font-serif text-2xl text-[#221E1B] font-medium">Journals &amp; Musings</h3>
-            <button
-              onClick={openNewMusing}
-              className="inline-flex items-center px-5 py-2.5 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-wider font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-1.5" />
-              <span>Write Journal</span>
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h3 className="font-serif text-2xl text-[#221E1B] font-medium">Journals &amp; Musings</h3>
+                <span
+                  className={`text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded border ${
+                    githubConfigured
+                      ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                      : "bg-amber-50 text-amber-800 border-amber-200"
+                  }`}
+                >
+                  {githubConfigured ? "Live GitHub Sync Active" : "Local Preview Only"}
+                </span>
+              </div>
+              <p className="text-xs text-[#736B61] mt-1">
+                {githubConfigured
+                  ? "Publishing, editing, or deleting a journal commits directly to GitHub and updates your live site across all devices in ~1 minute."
+                  : "Add GITHUB_TOKEN to Vercel Environment Variables (or .env.local) to publish directly from this portal across all devices."}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {githubConfigured && (
+                <button
+                  onClick={() => syncFromGitHub(false)}
+                  disabled={isSyncingGitHub}
+                  className="inline-flex items-center justify-center px-4 py-2.5 bg-white border border-[#D5C7B2] text-[#4B453E] text-xs uppercase tracking-wider font-medium rounded-sm hover:border-[#856E4E] hover:text-[#221E1B] transition-colors disabled:opacity-60"
+                  title="Fetch latest journals from GitHub"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${isSyncingGitHub ? "animate-spin" : ""}`} />
+                  <span>{isSyncingGitHub ? "Syncing..." : "Sync"}</span>
+                </button>
+              )}
+              <button
+                onClick={openNewMusing}
+                className="inline-flex items-center justify-center px-5 py-2.5 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-wider font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
+              >
+                <Plus className="w-4 h-4 mr-1.5" />
+                <span>Write Journal</span>
+              </button>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            {musings.map((m) => (
-              <div
-                key={m.id}
-                className="bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
-              >
-                <div className="space-y-1 max-w-2xl">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-[#856E4E]">
-                    {m.category} • {m.date}
-                  </span>
-                  <h4 className="font-serif text-xl font-medium text-[#221E1B]">{m.title}</h4>
-                  <p className="font-serif italic text-xs text-[#736B61] line-clamp-1">{m.subtitle}</p>
-                </div>
-
-                <div className="flex items-center space-x-3 self-end sm:self-center">
-                  <Link
-                    to={`/musings/${m.slug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 text-[#736B61] hover:text-[#221E1B]"
-                    title="Read live journal"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </Link>
-                  <button
-                    onClick={() => openEditMusing(m)}
-                    className="px-3 py-1.5 bg-[#F7F3EB] text-[#221E1B] text-xs font-medium rounded hover:bg-[#856E4E] hover:text-white transition-colors"
-                  >
-                    Edit Journal
-                  </button>
-                  {musings.length > 1 && (
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Delete journal "${m.title}"?`)) {
-                          deleteMusing(m.id);
-                          showBanner("Journal deleted.");
-                        }
-                      }}
-                      className="p-1.5 text-[#C53030] hover:bg-red-50 rounded transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+          {!githubConfigured && (
+            <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-sm flex items-start space-x-3 text-xs text-amber-900">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-amber-700" />
+              <div>
+                <p className="font-medium">GitHub Auto-Commit is not configured yet.</p>
+                <p className="mt-0.5 text-amber-800">
+                  Add <code>GITHUB_TOKEN</code> and <code>ADMIN_PASSKEY</code> in Vercel Settings &rarr; Environment Variables (or <code>.env.local</code> for local testing) and redeploy so new journals save permanently for all visitors.
+                </p>
               </div>
-            ))}
+            </div>
+          )}
+
+          {lastPublishInfo && (
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-emerald-900">
+              <div className="flex items-start space-x-2.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-700" />
+                <span>{lastPublishInfo.message}</span>
+              </div>
+              {lastPublishInfo.commitUrl && (
+                <a
+                  href={lastPublishInfo.commitUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-emerald-800 font-medium underline shrink-0"
+                >
+                  <span>View GitHub Commit</span>
+                  <ExternalLink className="w-3 h-3 ml-1" />
+                </a>
+              )}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {musings.map((m) => {
+              const isBuiltIn = BUILT_IN_MUSING_IDS.has(m.id);
+              return (
+                <div
+                  key={m.id}
+                  className="bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+                >
+                  <div className="space-y-1 max-w-2xl">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-[#856E4E]">
+                        {m.category} • {m.date}
+                      </span>
+                      {isBuiltIn && (
+                        <span className="text-[10px] uppercase font-mono tracking-wider bg-[#F4EFE6] text-[#736B61] px-2 py-0.5 rounded border border-[#E5DDCF]">
+                          Built-in Flagship
+                        </span>
+                      )}
+                    </div>
+                    <h4 className="font-serif text-xl font-medium text-[#221E1B]">{m.title}</h4>
+                    <p className="font-serif italic text-xs text-[#736B61] line-clamp-1">
+                      {m.subtitle || m.excerpt}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 self-end sm:self-center">
+                    <Link
+                      to={`/musings/${m.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-[#736B61] hover:text-[#221E1B]"
+                      title="Read live journal"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                    <button
+                      onClick={() => copyMusingCode(m)}
+                      className="inline-flex items-center px-3 py-1.5 bg-white border border-[#D5C7B2] text-[#4B453E] text-xs font-medium rounded hover:border-[#856E4E] hover:text-[#221E1B] transition-colors"
+                      title="Copy JSON snippet"
+                    >
+                      <Copy className="w-3.5 h-3.5 mr-1.5 text-[#856E4E]" />
+                      Copy JSON
+                    </button>
+                    {!isBuiltIn && (
+                      <>
+                        <button
+                          onClick={() => openEditMusing(m)}
+                          className="px-3 py-1.5 bg-[#F7F3EB] text-[#221E1B] text-xs font-medium rounded hover:bg-[#856E4E] hover:text-white transition-colors"
+                        >
+                          Edit Journal
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMusing(m)}
+                          disabled={isSyncingGitHub}
+                          className="p-1.5 text-[#C53030] hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                          title="Delete journal"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1069,72 +1413,22 @@ export const AdminPage: React.FC = () => {
             <div>
               <span className="text-xs uppercase tracking-[0.2em] font-mono text-[#856E4E] flex items-center">
                 <Lock className="w-3.5 h-3.5 mr-1.5" />
-                Security &amp; Passkey
+                Security &amp; Server Passkey
               </span>
               <h4 className="font-serif text-xl text-[#221E1B] font-medium mt-1">
-                Change Admin Portal Passkey
+                Server-Verified Author Authentication
               </h4>
               <p className="font-serif italic text-xs text-[#736B61] mt-0.5">
-                Set a personal secret passkey to unlock your Author Portal.
+                Your Author Portal passkey is verified securely on the server via an encrypted session cookie so nobody can inspect it in browser code.
               </p>
             </div>
 
-            <div className="p-5 bg-[#F7F3EB] border border-[#E5DDCF] rounded-sm space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono text-[#736B61] uppercase">
-                    New Passkey
-                  </label>
-                  <input
-                    type="password"
-                    value={newPasskey}
-                    onChange={(e) => setNewPasskey(e.target.value)}
-                    placeholder="Enter new passkey (min 4 chars)"
-                    className="w-full px-4 py-2 bg-white border border-[#D5C7B2] rounded-sm text-sm"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="block text-[11px] font-mono text-[#736B61] uppercase">
-                    Confirm Passkey
-                  </label>
-                  <input
-                    type="password"
-                    value={confirmPasskey}
-                    onChange={(e) => setConfirmPasskey(e.target.value)}
-                    placeholder="Confirm new passkey"
-                    className="w-full px-4 py-2 bg-white border border-[#D5C7B2] rounded-sm text-sm"
-                  />
-                </div>
-              </div>
-
-              {passkeyFeedback && (
-                <div
-                  className={`p-3 text-xs rounded-xs ${
-                    passkeyFeedback.type === "success"
-                      ? "bg-green-50 text-green-800 border border-green-200"
-                      : "bg-red-50 text-red-800 border border-red-200"
-                  }`}
-                >
-                  {passkeyFeedback.msg}
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={handleUpdatePasskey}
-                  className="px-5 py-2 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-wider font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
-                >
-                  Update Passkey
-                </button>
-                <button
-                  type="button"
-                  onClick={handleResetPasskey}
-                  className="px-3 py-2 text-xs text-[#736B61] hover:text-[#221E1B] underline transition-colors"
-                >
-                  Reset to Default (&quot;rishitha&quot;)
-                </button>
-              </div>
+            <div className="p-5 bg-[#F7F3EB] border border-[#E5DDCF] rounded-sm space-y-2 text-xs text-[#4B453E] leading-relaxed">
+              <p>
+                To change your passkey, update the <code>ADMIN_PASSKEY</code> variable in{" "}
+                <strong>Vercel Dashboard &rarr; Settings &rarr; Environment Variables</strong> (or in{" "}
+                <code>.env.local</code> for local development) and redeploy.
+              </p>
             </div>
           </div>
         </form>
@@ -1447,7 +1741,7 @@ export const AdminPage: React.FC = () => {
 
       {/* --- MODAL FOR ADDING/EDITING MUSING --- */}
       {musingModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-start sm:items-center justify-center p-4 overflow-y-auto">
           <div className="bg-[#FDFBF7] border border-[#E0D8CB] rounded-sm max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 my-8">
             <div className="flex items-center justify-between border-b border-[#EFE9DD] pb-4">
               <h3 className="font-serif text-2xl text-[#221E1B] font-medium">
@@ -1462,32 +1756,67 @@ export const AdminPage: React.FC = () => {
             </div>
 
             <form onSubmit={saveMusing} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block uppercase font-mono text-[#4B453E] mb-1">Journal Title *</label>
+                  <input
+                    type="text"
+                    required
+                    value={musingForm.title}
+                    onChange={(e) => setMusingForm({ ...musingForm, title: e.target.value })}
+                    placeholder="e.g. Reflections on Stillness"
+                    className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block uppercase font-mono text-[#4B453E] mb-1">URL Slug (optional)</label>
+                  <input
+                    type="text"
+                    value={musingForm.slug}
+                    onChange={(e) => setMusingForm({ ...musingForm, slug: e.target.value })}
+                    placeholder="e.g. reflections-on-stillness"
+                    className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm font-mono text-xs"
+                  />
+                </div>
+              </div>
+
               <div>
-                <label className="block uppercase font-mono text-[#4B453E] mb-1">Journal Title *</label>
+                <label className="block uppercase font-mono text-[#4B453E] mb-1">Subtitle (optional)</label>
                 <input
                   type="text"
-                  required
-                  value={musingForm.title}
-                  onChange={(e) => setMusingForm({ ...musingForm, title: e.target.value })}
-                  placeholder="e.g. Reflections on Stillness"
+                  value={musingForm.subtitle}
+                  onChange={(e) => setMusingForm({ ...musingForm, subtitle: e.target.value })}
+                  placeholder="A short sub-headline or opening reflection..."
                   className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm"
                 />
               </div>
 
-              <div>
-                <label className="block uppercase font-mono text-[#4B453E] mb-1">Subtitle *</label>
-                <input
-                  type="text"
-                  required
-                  value={musingForm.subtitle}
-                  onChange={(e) => setMusingForm({ ...musingForm, subtitle: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block uppercase font-mono text-[#4B453E] mb-1">Category</label>
+                  <input
+                    type="text"
+                    value={musingForm.category}
+                    onChange={(e) => setMusingForm({ ...musingForm, category: e.target.value })}
+                    placeholder="e.g. Psychological Inquiry & Reflections"
+                    className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block uppercase font-mono text-[#4B453E] mb-1">Read Time</label>
+                  <input
+                    type="text"
+                    value={musingForm.readTime}
+                    onChange={(e) => setMusingForm({ ...musingForm, readTime: e.target.value })}
+                    placeholder="e.g. 4 min read"
+                    className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm"
+                  />
+                </div>
               </div>
 
               <div>
                 <label className="block uppercase font-mono text-[#4B453E] mb-1">
-                  Journal Body Text (separate paragraphs with blank lines) *
+                  Journal Body Text (separate paragraphs with blank lines; start a line with ### for a section heading) *
                 </label>
                 <textarea
                   rows={8}
@@ -1511,19 +1840,43 @@ export const AdminPage: React.FC = () => {
                 />
               </div>
 
+              {musingError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-sm text-xs text-[#C53030] flex items-start space-x-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{musingError}</span>
+                </div>
+              )}
+
               <div className="flex justify-end space-x-3 pt-4 border-t border-[#EFE9DD]">
                 <button
                   type="button"
+                  disabled={isPublishingMusing}
                   onClick={() => setMusingModalOpen(false)}
-                  className="px-5 py-2 border border-[#E0D8CB] uppercase tracking-wider font-medium text-[#736B61] hover:bg-[#F7F3EB] rounded-sm"
+                  className="px-5 py-2 border border-[#E0D8CB] uppercase tracking-wider font-medium text-[#736B61] hover:bg-[#F7F3EB] rounded-sm disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-[#221E1B] text-[#FDFBF7] uppercase tracking-wider font-medium rounded-sm hover:bg-[#856E4E] transition-colors"
+                  disabled={isPublishingMusing}
+                  className="px-6 py-2 bg-[#221E1B] text-[#FDFBF7] uppercase tracking-wider font-medium rounded-sm hover:bg-[#856E4E] transition-colors inline-flex items-center space-x-2 disabled:opacity-60"
                 >
-                  {editingMusingId ? "Save Journal" : "Publish Journal"}
+                  {isPublishingMusing ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Committing to GitHub...</span>
+                    </>
+                  ) : (
+                    <span>
+                      {githubConfigured
+                        ? editingMusingId
+                          ? "Save & Commit to Live Site"
+                          : "Publish to Live Site"
+                        : editingMusingId
+                        ? "Save Draft"
+                        : "Save Draft Preview"}
+                    </span>
+                  )}
                 </button>
               </div>
             </form>

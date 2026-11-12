@@ -21,6 +21,12 @@ export const MusingsPage: React.FC = () => {
     content: []
   };
 
+  const isZentangleFeatured = featuredMusing.id === "fractals-of-thought";
+  const featuredQuoteText = isZentangleFeatured
+    ? "In a way, it feels like thoughts are fractal; repeating, similar, and sometimes unpredictable, but rarely simple or linear... Maybe these patterns don't just exist on paper; maybe they reflect the patterns within the mind itself."
+    : ("excerpt" in featuredMusing ? featuredMusing.excerpt : "") ||
+      ("concludingReflection" in featuredMusing ? featuredMusing.concludingReflection : "");
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-16 sm:space-y-20">
       {/* Editorial Header */}
@@ -71,9 +77,11 @@ export const MusingsPage: React.FC = () => {
               </p>
             </div>
 
-            <blockquote className="border-l-2 border-[#856E4E] pl-4 py-1 text-sm sm:text-base font-serif text-[#4B453E] italic bg-[#F7F3EB]/50">
-              &ldquo;In a way, it feels like thoughts are fractal; repeating, similar, and sometimes unpredictable, but rarely simple or linear... Maybe these patterns don&apos;t just exist on paper; maybe they reflect the patterns within the mind itself.&rdquo;
-            </blockquote>
+            {featuredQuoteText && (
+              <blockquote className="border-l-2 border-[#856E4E] pl-4 py-1 text-sm sm:text-base font-serif text-[#4B453E] italic bg-[#F7F3EB]/50">
+                &ldquo;{featuredQuoteText}&rdquo;
+              </blockquote>
+            )}
 
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <Link
@@ -85,43 +93,101 @@ export const MusingsPage: React.FC = () => {
                 <ArrowRight className="w-3.5 h-3.5 ml-2" />
               </Link>
 
-              <button
-                type="button"
-                onClick={() => setLightboxIndex(0)}
-                className="inline-flex items-center px-5 py-3 border border-[#D5C7B2] bg-white text-[#4B453E] text-xs uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] hover:text-[#221E1B] transition-colors"
-              >
-                <Eye className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
-                View {artworks.length} Zentangle Sketches
-              </button>
+              {isZentangleFeatured && (
+                <button
+                  type="button"
+                  onClick={() => setLightboxIndex(0)}
+                  className="inline-flex items-center px-5 py-3 border border-[#D5C7B2] bg-white text-[#4B453E] text-xs uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] hover:text-[#221E1B] transition-colors"
+                >
+                  <Eye className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
+                  View {artworks.length} Zentangle Sketches
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Right: Zentangle Sketch Montage */}
+          {/* Right: Cover / Sketch Preview */}
           <div className="lg:col-span-5">
-            <div className="relative group cursor-pointer" onClick={() => setLightboxIndex(0)}>
-              <div className="aspect-[4/3] rounded-sm overflow-hidden border border-[#EAE3D6] shadow-md bg-white p-2">
-                <img
-                  src={featuredMusing.coverImage || "/assets/sketches/sketch_nested_vortex.jpg"}
-                  alt="Zentangle Fractal Study"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/assets/sketches/sketch_nested_vortex.jpg";
-                  }}
-                  className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                />
-              </div>
-              <div className="absolute inset-x-4 bottom-4 bg-[#221E1B]/85 backdrop-blur-xs text-[#FDFBF7] p-3 rounded-xs text-xs flex items-center justify-between opacity-95 group-hover:opacity-100 transition-opacity">
-                <div>
-                  <p className="font-serif font-medium">Study in Spiral Geometry</p>
-                  <p className="text-[10px] text-[#D5C7B2] tracking-wider uppercase">Pencil on Paper • Plate I</p>
+            {isZentangleFeatured ? (
+              <div className="relative group cursor-pointer" onClick={() => setLightboxIndex(0)}>
+                <div className="aspect-[4/3] rounded-sm overflow-hidden border border-[#EAE3D6] shadow-md bg-white p-2">
+                  <img
+                    src={featuredMusing.coverImage || "/assets/sketches/sketch_nested_vortex.jpg"}
+                    alt={featuredMusing.title}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/assets/sketches/sketch_nested_vortex.jpg";
+                    }}
+                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                  />
                 </div>
-                <span className="text-[11px] uppercase tracking-wider text-[#D5C7B2] flex items-center">
-                  Inspect <Eye className="w-3 h-3 ml-1" />
-                </span>
+                <div className="absolute inset-x-4 bottom-4 bg-[#221E1B]/85 backdrop-blur-xs text-[#FDFBF7] p-3 rounded-xs text-xs flex items-center justify-between opacity-95 group-hover:opacity-100 transition-opacity">
+                  <div>
+                    <p className="font-serif font-medium">Study in Spiral Geometry</p>
+                    <p className="text-[10px] text-[#D5C7B2] tracking-wider uppercase">Pencil on Paper • Plate I</p>
+                  </div>
+                  <span className="text-[11px] uppercase tracking-wider text-[#D5C7B2] flex items-center">
+                    Inspect <Eye className="w-3 h-3 ml-1" />
+                  </span>
+                </div>
               </div>
-            </div>
+            ) : (
+              <Link to={`/musings/${featuredMusing.slug}`} className="block relative group">
+                <div className="aspect-[4/3] rounded-sm overflow-hidden border border-[#EAE3D6] shadow-md bg-white p-2">
+                  <img
+                    src={featuredMusing.coverImage || "/assets/sketches/sketch_nested_vortex.jpg"}
+                    alt={featuredMusing.title}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/assets/sketches/sketch_nested_vortex.jpg";
+                    }}
+                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
+                  />
+                </div>
+                <div className="absolute inset-x-4 bottom-4 bg-[#221E1B]/85 backdrop-blur-xs text-[#FDFBF7] p-3 rounded-xs text-xs flex items-center justify-between opacity-95 group-hover:opacity-100 transition-opacity">
+                  <div className="min-w-0 pr-2">
+                    <p className="font-serif font-medium truncate">{featuredMusing.title}</p>
+                    <p className="text-[10px] text-[#D5C7B2] tracking-wider uppercase truncate">{featuredMusing.category}</p>
+                  </div>
+                  <span className="text-[11px] uppercase tracking-wider text-[#D5C7B2] flex items-center shrink-0">
+                    Read <ArrowRight className="w-3 h-3 ml-1" />
+                  </span>
+                </div>
+              </Link>
+            )}
           </div>
         </div>
       </section>
+
+      {/* Additional Musings / Journals */}
+      {musings.length > 1 && (
+        <section className="space-y-6">
+          <div className="border-b border-[#EFE9DD] pb-4">
+            <span className="text-xs uppercase tracking-[0.2em] font-mono text-[#856E4E]">Archive</span>
+            <h2 className="font-serif text-2xl sm:text-3xl text-[#221E1B] font-medium mt-1">
+              More Journals &amp; Essays
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {musings.slice(1).map((m) => (
+              <div key={m.id} className="p-6 bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm space-y-3 hover:border-[#856E4E] transition-all">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-[#856E4E] font-mono">
+                  <span>{m.category}</span>
+                  <span>•</span>
+                  <span>{m.date}</span>
+                  <span>•</span>
+                  <span>{m.readTime}</span>
+                </div>
+                <Link to={`/musings/${m.slug}`}>
+                  <h3 className="font-serif text-xl font-medium text-[#221E1B] hover:text-[#856E4E] transition-colors">{m.title}</h3>
+                </Link>
+                <p className="font-serif italic text-sm text-[#736B61] line-clamp-2">{m.subtitle || m.excerpt}</p>
+                <Link to={`/musings/${m.slug}`} className="inline-flex items-center text-xs uppercase tracking-wider text-[#856E4E] font-medium pt-2">
+                  Read Journal <ArrowRight className="w-3.5 h-3.5 ml-1" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Embedded Zentangle Sketchbook Gallery */}
       <section className="space-y-8">
@@ -138,7 +204,7 @@ export const MusingsPage: React.FC = () => {
             </p>
           </div>
           <Link
-            to={`/musings/${featuredMusing.slug}#sketches`}
+            to="/musings/fractals-of-thought#sketches"
             className="inline-flex items-center text-xs uppercase tracking-[0.14em] font-medium text-[#856E4E] hover:text-[#221E1B] transition-colors"
           >
             Read Alongside Text
@@ -158,36 +224,6 @@ export const MusingsPage: React.FC = () => {
           ))}
         </div>
       </section>
-
-      {/* Additional Musings / Journals */}
-      {musings.length > 1 && (
-        <section className="space-y-6">
-          <div className="border-b border-[#EFE9DD] pb-4">
-            <span className="text-xs uppercase tracking-[0.2em] font-mono text-[#856E4E]">Archive</span>
-            <h2 className="font-serif text-2xl sm:text-3xl text-[#221E1B] font-medium mt-1">
-              More Journals &amp; Essays
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {musings.slice(1).map((m) => (
-              <div key={m.id} className="p-6 bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm space-y-3 hover:border-[#856E4E] transition-all">
-                <div className="flex items-center gap-2 text-xs text-[#856E4E] font-mono">
-                  <span>{m.category}</span>
-                  <span>•</span>
-                  <span>{m.readTime}</span>
-                </div>
-                <Link to={`/musings/${m.slug}`}>
-                  <h3 className="font-serif text-xl font-medium text-[#221E1B] hover:text-[#856E4E] transition-colors">{m.title}</h3>
-                </Link>
-                <p className="font-serif italic text-sm text-[#736B61] line-clamp-2">{m.subtitle}</p>
-                <Link to={`/musings/${m.slug}`} className="inline-flex items-center text-xs uppercase tracking-wider text-[#856E4E] font-medium pt-2">
-                  Read Journal <ArrowRight className="w-3.5 h-3.5 ml-1" />
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Author Journal Note */}
       <div className="p-8 sm:p-10 bg-[#F7F3EB] border border-[#EFE9DD] rounded-sm text-center max-w-2xl mx-auto space-y-3">
