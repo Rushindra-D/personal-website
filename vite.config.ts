@@ -6,6 +6,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import contactHandler from './api/contact.ts'
 import adminAuthHandler from './api/admin-auth.ts'
 import journalsHandler from './api/journals.ts'
+import sitemapHandler from './api/sitemap.ts'
 
 type ApiHandler = (req: any, res: any) => Promise<unknown> | unknown;
 
@@ -92,6 +93,8 @@ function localApiPlugin(env: Record<string, string>): Plugin {
       attachVercelMiddleware(server, '/api/contact', contactHandler, env);
       attachVercelMiddleware(server, '/api/admin-auth', adminAuthHandler, env);
       attachVercelMiddleware(server, '/api/journals', journalsHandler, env);
+      attachVercelMiddleware(server, '/api/sitemap', sitemapHandler, env);
+      attachVercelMiddleware(server, '/sitemap.xml', sitemapHandler, env);
     },
   };
 }
