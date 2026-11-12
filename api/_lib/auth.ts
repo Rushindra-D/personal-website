@@ -136,6 +136,19 @@ export function getClientIp(req: VercelRequest): string {
   const firstForwarded = Array.isArray(forwardedFor)
     ? forwardedFor[0]
     : forwardedFor?.split(',')[0];
-  return firstForwarded?.trim() || req.socket.remoteAddress || 'anonymous';
+  return firstForwarded?.trim() || req.socket?.remoteAddress || 'anonymous';
+}
+
+export function parseJsonBody(rawBody: unknown): Record<string, unknown> {
+  if (!rawBody) return {};
+  if (typeof rawBody === 'string') {
+    try {
+      const parsed = JSON.parse(rawBody);
+      return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      return {};
+    }
+  }
+  return typeof rawBody === 'object' ? (rawBody as Record<string, unknown>) : {};
 }
 

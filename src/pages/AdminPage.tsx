@@ -226,11 +226,22 @@ export const AdminPage: React.FC = () => {
         body: JSON.stringify({ passkey: passwordInput.trim() }),
       });
 
-      const data = (await response.json()) as {
+      const rawText = await response.text();
+      let data: {
         authenticated?: boolean;
         githubConfigured?: boolean;
         error?: string;
-      };
+      } = {};
+      if (rawText) {
+        try {
+          data = JSON.parse(rawText) as typeof data;
+        } catch {
+          setAuthError(
+            `Authentication endpoint returned HTTP ${response.status} (non-JSON). If you are on a static mirror like GitHub Pages, open your Vercel deployment URL instead.`
+          );
+          return;
+        }
+      }
 
       if (!response.ok || !data.authenticated) {
         setAuthError(data.error || "Incorrect passkey. Please try again.");

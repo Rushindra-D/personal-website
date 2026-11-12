@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { isAuthenticatedRequest } from './_lib/auth.ts';
+import { isAuthenticatedRequest, parseJsonBody } from './_lib/auth.js';
 
 interface JournalSection {
   heading?: string;
@@ -328,7 +328,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'POST') {
-      const body = (req.body || {}) as {
+      const body = parseJsonBody(req.body) as {
         journal?: unknown;
         mode?: unknown;
         targetId?: unknown;
@@ -392,10 +392,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'DELETE') {
       const queryId = typeof req.query?.id === 'string' ? req.query.id : undefined;
-      const bodyId =
-        req.body && typeof (req.body as { id?: unknown }).id === 'string'
-          ? (req.body as { id: string }).id
-          : undefined;
+      const parsedBody = parseJsonBody(req.body);
+      const bodyId = typeof parsedBody.id === 'string' ? parsedBody.id : undefined;
       const idToDelete = (bodyId || queryId || '').trim();
 
       if (!idToDelete) {

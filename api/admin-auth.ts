@@ -5,9 +5,10 @@ import {
   getClientIp,
   getConfiguredPasskey,
   isAuthenticatedRequest,
+  parseJsonBody,
   setSessionCookie,
   verifyAdminPasskey,
-} from './_lib/auth.ts';
+} from './_lib/auth.js';
 
 interface AuthAttemptRecord {
   count: number;
@@ -70,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const body = (req.body || {}) as { passkey?: unknown };
+  const body = parseJsonBody(req.body) as { passkey?: unknown };
   if (typeof body.passkey !== 'string' || !body.passkey.trim()) {
     return res.status(400).json({ error: 'Please enter your author passkey.' });
   }
