@@ -119,23 +119,34 @@ async function fetchJournalsFromGitHub(config: GitHubConfig): Promise<{
   };
 }
 
-async function commitJournalsToGitHub(
+const ALLOWED_IMAGE_MIME_TYPES: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
+const MAX_IMAGE_UPLOAD_BYTES = 3 * 1024 * 1024;
+
+interface ImageUploadPayload {
+  mimeType?: unknown;
+  contentBase64?: unknown;
+}
+
+async function putGitHubFile(
   config: GitHubConfig,
-  journals: JournalEntry[],
-  sha: string | undefined,
-  commitMessage: string
+  repoPath: string,
+  base64Content: string,
+  commitMessage: string,
+  sha?: string
 ): Promise<{ commitUrl?: string; commitSha?: string }> {
   const url = `https://api.github.com/repos/${encodeURIComponent(config.owner)}/${encodeURIComponent(
     config.repo
-  )}/contents/${encodeGitHubPath(config.path)}`;
-
-  const encodedContent = Buffer.from(JSON.stringify(journals, null, 2) + '\n', 'utf8').toString(
-    'base64'
-  );
+  )}/contents/${encodeGitHubPath(repoPath)}`;
 
   const payload: Record<string, string> = {
     message: commitMessage,
-    content: encodedContent,
+    content: base64Content,
     branch: config.branch,
   };
   if (sha) {
@@ -157,7 +168,7 @@ async function commitJournalsToGitHub(
     const hint =
       response.status === 401 || response.status === 403
         ? 'GITHUB_TOKEN does not have write permission to commit to the repository.'
-        : data.message || 'Failed to commit journal to GitHub.';
+        : data.message || 'Failed to commit file to GitHub.';
     throw new GitHubApiError(response.status, hint);
   }
 
@@ -165,6 +176,66 @@ async function commitJournalsToGitHub(
     commitUrl: data.commit?.html_url,
     commitSha: data.commit?.sha,
   };
+}
+
+async function commitJournalsToGitHub(
+  config: GitHubConfig,
+  journals: JournalEntry[],
+  sha: string | undefined,
+  commitMessage: string
+): Promise<{ commitUrl?: string; commitSha?: string }> {
+  const encodedContent = Buffer.from(JSON.stringify(journals, null, 2) + '\n', 'utf8').toString(
+    'base64'
+  );
+  return putGitHubFile(config, config.path, encodedContent, commitMessage, sha);
+}
+
+async function uploadJournalImageToGitHub(
+  config: GitHubConfig,
+  slug: string,
+  rawUpload: unknown
+): Promise<string> {
+  if (!rawUpload || typeof rawUpload !== 'object') {
+    throw new GitHubApiError(400, 'Invalid image upload payload.');
+  }
+
+  const { mimeType, contentBase64 } = rawUpload as ImageUploadPayload;
+  const normalizedMime = typeof mimeType === 'string' ? mimeType.trim().toLowerCase() : '';
+  const ext = ALLOWED_IMAGE_MIME_TYPES[normalizedMime];
+  if (!ext) {
+    throw new GitHubApiError(400, 'Unsupported image format. Please upload JPG, PNG, WebP, or GIF.');
+  }
+
+  const rawBase64 = typeof contentBase64 === 'string' ? contentBase64.trim() : '';
+  const cleanBase64 = rawBase64.replace(/^data:image\/[a-z0-9.+-]+;base64,/i, '');
+  if (!cleanBase64) {
+    throw new GitHubApiError(400, 'Image upload content is empty.');
+  }
+
+  const buffer = Buffer.from(cleanBase64, 'base64');
+  if (buffer.byteLength === 0 || buffer.byteLength > MAX_IMAGE_UPLOAD_BYTES) {
+    throw new GitHubApiError(400, 'Image must be between 1 byte and 3 MB.');
+  }
+
+  const fileName = `${slug}-${Date.now()}.${ext}`;
+  const repoPath = `public/assets/journals/${fileName}`;
+  await putGitHubFile(
+    config,
+    repoPath,
+    buffer.toString('base64'),
+    `chore(journals): upload cover image for "${slug}" via author portal`
+  );
+
+  return `/assets/journals/${fileName}`;
+}
+
+function isSafeImageReference(value: string): boolean {
+  return (
+    value.startsWith('/assets/') ||
+    value.startsWith('https://') ||
+    value.startsWith('http://') ||
+    /^data:image\/[a-z0-9.+-]+;base64,/i.test(value)
+  );
 }
 
 function sanitizeSlug(raw: string): string {
@@ -207,7 +278,8 @@ function validateAndNormalizeJournal(
   raw: unknown,
   existingJournals: JournalEntry[],
   mode: 'create' | 'update',
-  targetId?: string
+  targetId?: string,
+  uploadedCoverPath?: string
 ): { entry?: JournalEntry; error?: string } {
   if (!raw || typeof raw !== 'object') {
     return { error: 'Invalid journal payload.' };
@@ -242,10 +314,13 @@ function validateAndNormalizeJournal(
     typeof input.author === 'string' && input.author.trim()
       ? input.author.trim()
       : 'Rishitha Gorupati';
-  const coverImage =
-    typeof input.coverImage === 'string' && input.coverImage.trim()
-      ? input.coverImage.trim()
-      : '/assets/sketches/sketch_geometric_spiral.jpg';
+  const rawCoverImage = typeof input.coverImage === 'string' ? input.coverImage.trim() : '';
+  if (!uploadedCoverPath && rawCoverImage && !isSafeImageReference(rawCoverImage)) {
+    return {
+      error: 'Cover image must be a valid image URL (https://...), /assets/... path, or uploaded image file.',
+    };
+  }
+  const coverImage = uploadedCoverPath || rawCoverImage || undefined;
   const concludingReflection =
     typeof input.concludingReflection === 'string' ? input.concludingReflection.trim() : '';
   const excerptInput = typeof input.excerpt === 'string' ? input.excerpt.trim() : '';
@@ -275,24 +350,26 @@ function validateAndNormalizeJournal(
 
   const id = mode === 'update' && targetId ? targetId : slug;
 
-  return {
-    entry: {
-      id,
-      slug,
-      title,
-      subtitle,
-      category,
-      date,
-      readTime,
-      author,
-      excerpt,
-      coverImage,
-      tags: tags.length > 0 ? tags : ['Journal', 'Reflections'],
-      sections,
-      sketches: Array.isArray(input.sketches) ? input.sketches : [],
-      concludingReflection,
-    },
+  const entry: JournalEntry = {
+    id,
+    slug,
+    title,
+    subtitle,
+    category,
+    date,
+    readTime,
+    author,
+    excerpt,
+    tags: tags.length > 0 ? tags : ['Journal', 'Reflections'],
+    sections,
+    sketches: Array.isArray(input.sketches) ? input.sketches : [],
+    concludingReflection,
   };
+  if (coverImage) {
+    entry.coverImage = coverImage;
+  }
+
+  return { entry };
 }
 
 async function runWithConflictRetry<T>(fn: () => Promise<T>): Promise<T> {
@@ -332,6 +409,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         journal?: unknown;
         mode?: unknown;
         targetId?: unknown;
+        imageUpload?: unknown;
       };
       const mode = body.mode === 'update' ? 'update' : 'create';
       const targetId = typeof body.targetId === 'string' ? body.targetId.trim() : undefined;
@@ -342,13 +420,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
+      let cachedFetch: { journals: JournalEntry[]; sha?: string } | null =
+        await fetchJournalsFromGitHub(config);
+
+      const initialValidation = validateAndNormalizeJournal(
+        body.journal,
+        cachedFetch.journals,
+        mode,
+        targetId
+      );
+      if (initialValidation.error || !initialValidation.entry) {
+        return res.status(400).json({
+          error: initialValidation.error || 'Invalid journal entry.',
+        });
+      }
+
+      const uploadedCoverPath = body.imageUpload
+        ? await uploadJournalImageToGitHub(config, initialValidation.entry.slug, body.imageUpload)
+        : undefined;
+
       const result = await runWithConflictRetry(async () => {
-        const { journals, sha } = await fetchJournalsFromGitHub(config);
+        const { journals, sha } = cachedFetch || (await fetchJournalsFromGitHub(config));
+        cachedFetch = null;
+
         const { entry, error } = validateAndNormalizeJournal(
           body.journal,
           journals,
           mode,
-          targetId
+          targetId,
+          uploadedCoverPath
         );
         if (error || !entry) {
           throw new GitHubApiError(400, error || 'Invalid journal entry.');

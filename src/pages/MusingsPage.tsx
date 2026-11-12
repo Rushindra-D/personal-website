@@ -17,15 +17,18 @@ export const MusingsPage: React.FC = () => {
     date: "March 2026",
     readTime: "6 min read",
     category: "Psychological Inquiry & Art",
-    coverImage: "/assets/sketches/sketch_pattern_grid.jpg",
     content: []
   };
 
   const isZentangleFeatured = featuredMusing.id === "fractals-of-thought";
+  const featuredExcerpt = "excerpt" in featuredMusing ? featuredMusing.excerpt : "";
+  const featuredReflection =
+    "concludingReflection" in featuredMusing ? featuredMusing.concludingReflection : "";
   const featuredQuoteText = isZentangleFeatured
     ? "In a way, it feels like thoughts are fractal; repeating, similar, and sometimes unpredictable, but rarely simple or linear... Maybe these patterns don't just exist on paper; maybe they reflect the patterns within the mind itself."
-    : ("excerpt" in featuredMusing ? featuredMusing.excerpt : "") ||
-      ("concludingReflection" in featuredMusing ? featuredMusing.concludingReflection : "");
+    : featuredReflection ||
+      (featuredExcerpt && featuredExcerpt !== featuredMusing.subtitle ? featuredExcerpt : "") ||
+      featuredExcerpt;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-16 sm:space-y-20">
@@ -48,110 +51,60 @@ export const MusingsPage: React.FC = () => {
 
       {/* Featured Journal Hero Presentation */}
       <section className="bg-[#FDFBF7] border border-[#EAE3D6] rounded-sm p-6 sm:p-10 lg:p-14 shadow-sm hover:border-[#D5C7B2] transition-all">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          {/* Left: Journal Editorial Summary */}
-          <div className="lg:col-span-7 space-y-6">
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <span className="px-2.5 py-1 bg-[#F4EFE6] text-[#856E4E] uppercase tracking-wider font-mono font-medium rounded-xs border border-[#E5DDCF]">
-                {featuredMusing.category}
-              </span>
-              <span className="flex items-center text-[#736B61]">
-                <Calendar className="w-3.5 h-3.5 mr-1" />
-                {featuredMusing.date}
-              </span>
-              <span className="text-[#968D81]">•</span>
-              <span className="flex items-center text-[#736B61]">
-                <Clock className="w-3.5 h-3.5 mr-1" />
-                {featuredMusing.readTime}
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              <Link to={`/musings/${featuredMusing.slug}`} className="group">
-                <h2 className="font-serif text-3xl sm:text-4xl text-[#221E1B] font-medium group-hover:text-[#856E4E] transition-colors leading-tight">
-                  {featuredMusing.title}
-                </h2>
-              </Link>
-              <p className="font-serif italic text-base text-[#736B61] leading-relaxed">
-                {featuredMusing.subtitle}
-              </p>
-            </div>
-
-            {featuredQuoteText && (
-              <blockquote className="border-l-2 border-[#856E4E] pl-4 py-1 text-sm sm:text-base font-serif text-[#4B453E] italic bg-[#F7F3EB]/50">
-                &ldquo;{featuredQuoteText}&rdquo;
-              </blockquote>
-            )}
-
-            <div className="flex flex-wrap items-center gap-4 pt-2">
-              <Link
-                to={`/musings/${featuredMusing.slug}`}
-                className="inline-flex items-center px-6 py-3 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-[0.16em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors shadow-sm"
-              >
-                <BookOpen className="w-4 h-4 mr-2" />
-                Read Full Journal &amp; Inquiry
-                <ArrowRight className="w-3.5 h-3.5 ml-2" />
-              </Link>
-
-              {isZentangleFeatured && (
-                <button
-                  type="button"
-                  onClick={() => setLightboxIndex(0)}
-                  className="inline-flex items-center px-5 py-3 border border-[#D5C7B2] bg-white text-[#4B453E] text-xs uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] hover:text-[#221E1B] transition-colors"
-                >
-                  <Eye className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
-                  View {artworks.length} Zentangle Sketches
-                </button>
-              )}
-            </div>
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center gap-3 text-xs">
+            <span className="px-2.5 py-1 bg-[#F4EFE6] text-[#856E4E] uppercase tracking-wider font-mono font-medium rounded-xs border border-[#E5DDCF]">
+              {featuredMusing.category}
+            </span>
+            <span className="flex items-center text-[#736B61]">
+              <Calendar className="w-3.5 h-3.5 mr-1" />
+              {featuredMusing.date}
+            </span>
+            <span className="text-[#968D81]">•</span>
+            <span className="flex items-center text-[#736B61]">
+              <Clock className="w-3.5 h-3.5 mr-1" />
+              {featuredMusing.readTime}
+            </span>
           </div>
 
-          {/* Right: Cover / Sketch Preview */}
-          <div className="lg:col-span-5">
-            {isZentangleFeatured ? (
-              <div className="relative group cursor-pointer" onClick={() => setLightboxIndex(0)}>
-                <div className="aspect-[4/3] rounded-sm overflow-hidden border border-[#EAE3D6] shadow-md bg-white p-2">
-                  <img
-                    src={featuredMusing.coverImage || "/assets/sketches/sketch_nested_vortex.jpg"}
-                    alt={featuredMusing.title}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/assets/sketches/sketch_nested_vortex.jpg";
-                    }}
-                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                  />
-                </div>
-                <div className="absolute inset-x-4 bottom-4 bg-[#221E1B]/85 backdrop-blur-xs text-[#FDFBF7] p-3 rounded-xs text-xs flex items-center justify-between opacity-95 group-hover:opacity-100 transition-opacity">
-                  <div>
-                    <p className="font-serif font-medium">Study in Spiral Geometry</p>
-                    <p className="text-[10px] text-[#D5C7B2] tracking-wider uppercase">Pencil on Paper • Plate I</p>
-                  </div>
-                  <span className="text-[11px] uppercase tracking-wider text-[#D5C7B2] flex items-center">
-                    Inspect <Eye className="w-3 h-3 ml-1" />
-                  </span>
-                </div>
-              </div>
-            ) : (
-              <Link to={`/musings/${featuredMusing.slug}`} className="block relative group">
-                <div className="aspect-[4/3] rounded-sm overflow-hidden border border-[#EAE3D6] shadow-md bg-white p-2">
-                  <img
-                    src={featuredMusing.coverImage || "/assets/sketches/sketch_nested_vortex.jpg"}
-                    alt={featuredMusing.title}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = "/assets/sketches/sketch_nested_vortex.jpg";
-                    }}
-                    className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-500"
-                  />
-                </div>
-                <div className="absolute inset-x-4 bottom-4 bg-[#221E1B]/85 backdrop-blur-xs text-[#FDFBF7] p-3 rounded-xs text-xs flex items-center justify-between opacity-95 group-hover:opacity-100 transition-opacity">
-                  <div className="min-w-0 pr-2">
-                    <p className="font-serif font-medium truncate">{featuredMusing.title}</p>
-                    <p className="text-[10px] text-[#D5C7B2] tracking-wider uppercase truncate">{featuredMusing.category}</p>
-                  </div>
-                  <span className="text-[11px] uppercase tracking-wider text-[#D5C7B2] flex items-center shrink-0">
-                    Read <ArrowRight className="w-3 h-3 ml-1" />
-                  </span>
-                </div>
-              </Link>
+          <div className="space-y-3">
+            <Link to={`/musings/${featuredMusing.slug}`} className="group block">
+              <h2 className="font-serif text-3xl sm:text-4xl text-[#221E1B] font-medium group-hover:text-[#856E4E] transition-colors leading-tight">
+                {featuredMusing.title}
+              </h2>
+            </Link>
+            {featuredMusing.subtitle && (
+              <p className="font-serif italic text-base sm:text-lg text-[#736B61] leading-relaxed">
+                {featuredMusing.subtitle}
+              </p>
+            )}
+          </div>
+
+          {featuredQuoteText && (
+            <blockquote className="border-l-2 border-[#856E4E] pl-4 py-2 text-sm sm:text-base font-serif text-[#4B453E] italic bg-[#F7F3EB]/50">
+              &ldquo;{featuredQuoteText}&rdquo;
+            </blockquote>
+          )}
+
+          <div className="flex flex-wrap items-center gap-4 pt-2">
+            <Link
+              to={`/musings/${featuredMusing.slug}`}
+              className="inline-flex items-center px-6 py-3 bg-[#221E1B] text-[#FDFBF7] text-xs uppercase tracking-[0.16em] font-medium rounded-sm hover:bg-[#856E4E] transition-colors shadow-sm"
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              Read Full Journal &amp; Inquiry
+              <ArrowRight className="w-3.5 h-3.5 ml-2" />
+            </Link>
+
+            {isZentangleFeatured && (
+              <button
+                type="button"
+                onClick={() => setLightboxIndex(0)}
+                className="inline-flex items-center px-5 py-3 border border-[#D5C7B2] bg-white text-[#4B453E] text-xs uppercase tracking-[0.14em] font-medium rounded-sm hover:border-[#856E4E] hover:text-[#221E1B] transition-colors"
+              >
+                <Eye className="w-3.5 h-3.5 mr-2 text-[#856E4E]" />
+                View {artworks.length} Zentangle Sketches
+              </button>
             )}
           </div>
         </div>

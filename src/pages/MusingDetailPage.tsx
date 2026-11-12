@@ -121,6 +121,18 @@ export const MusingDetailPage: React.FC = () => {
             </div>
           </header>
 
+          {musing.id !== "fractals-of-thought" && musing.coverImage?.trim() && (
+            <figure className="max-w-3xl mx-auto">
+              <div className="rounded-sm overflow-hidden border border-[#EAE3D6] bg-white p-2 shadow-sm">
+                <img
+                  src={musing.coverImage}
+                  alt={musing.title}
+                  className="w-full max-h-[520px] object-cover rounded-xs"
+                />
+              </div>
+            </figure>
+          )}
+
           {musing.id !== "fractals-of-thought" ? (
             <div className="space-y-6 font-serif text-base sm:text-lg text-[#2C2723] leading-relaxed max-w-2xl mx-auto">
               {musing.sections &&

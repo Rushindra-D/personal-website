@@ -22,6 +22,8 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle2,
+  Image as ImageIcon,
+  Upload,
 } from "lucide-react";
 import { useData } from "../context/DataContext";
 import type { Poem } from "../data/poems";
@@ -122,10 +124,17 @@ export const AdminPage: React.FC = () => {
     category: "Psychological Inquiry & Reflections",
     readTime: "4 min read",
     author: "Rishitha Gorupati",
+    coverImage: "",
     excerpt: "",
     bodyText: "",
     concludingReflection: "",
   });
+  const [pendingImageUpload, setPendingImageUpload] = useState<{
+    filename: string;
+    mimeType: string;
+    contentBase64: string;
+    previewUrl: string;
+  } | null>(null);
 
   // --- AUTHOR PROFILE STATE ---
   const [profileForm, setProfileForm] = useState({
@@ -463,6 +472,7 @@ export const AdminPage: React.FC = () => {
   const openNewMusing = () => {
     setEditingMusingId(null);
     setMusingError(null);
+    setPendingImageUpload(null);
     setMusingForm({
       title: "",
       slug: "",
@@ -470,6 +480,7 @@ export const AdminPage: React.FC = () => {
       category: "Psychological Inquiry & Reflections",
       readTime: "4 min read",
       author: "Rishitha Gorupati",
+      coverImage: "",
       excerpt: "",
       bodyText: "",
       concludingReflection: "",
@@ -480,6 +491,7 @@ export const AdminPage: React.FC = () => {
   const openEditMusing = (musing: JournalEntry) => {
     setEditingMusingId(musing.id);
     setMusingError(null);
+    setPendingImageUpload(null);
     const bodyText = musing.sections
       .map((s) => (s.heading ? `### ${s.heading}\n` : "") + s.paragraphs.join("\n\n"))
       .join("\n\n");
@@ -491,11 +503,51 @@ export const AdminPage: React.FC = () => {
       category: musing.category,
       readTime: musing.readTime,
       author: musing.author,
+      coverImage: musing.coverImage || "",
       excerpt: musing.excerpt,
       bodyText,
       concludingReflection: musing.concludingReflection,
     });
     setMusingModalOpen(true);
+  };
+
+  const handleJournalImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMusingError(null);
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setMusingError("Please select a JPG, PNG, WebP, or GIF image.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 2.5 * 1024 * 1024) {
+      setMusingError("Image size must be 2.5 MB or smaller.");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = typeof reader.result === "string" ? reader.result : "";
+      const base64Part = dataUrl.includes(",") ? dataUrl.split(",")[1] || "" : "";
+      if (!base64Part) {
+        setMusingError("Could not read selected image file.");
+        return;
+      }
+      setPendingImageUpload({
+        filename: file.name,
+        mimeType: file.type,
+        contentBase64: base64Part,
+        previewUrl: dataUrl,
+      });
+    };
+    reader.onerror = () => {
+      setMusingError("Failed to read selected image file.");
+    };
+    reader.readAsDataURL(file);
   };
 
   const saveMusing = async (e: React.FormEvent) => {
@@ -513,6 +565,7 @@ export const AdminPage: React.FC = () => {
     const sections = parseMusingSections(musingForm.bodyText);
     const firstParagraph = sections.flatMap((s) => s.paragraphs)[0] || "";
     const existing = editingMusingId ? musings.find((m) => m.id === editingMusingId) : undefined;
+    const explicitCoverImage = musingForm.coverImage.trim() || undefined;
 
     const musingPayload: Omit<JournalEntry, "id"> = {
       slug,
@@ -526,7 +579,7 @@ export const AdminPage: React.FC = () => {
         musingForm.excerpt.trim() ||
         musingForm.subtitle.trim() ||
         (firstParagraph.length > 180 ? `${firstParagraph.slice(0, 180)}...` : firstParagraph),
-      coverImage: existing?.coverImage || "/assets/sketches/sketch_geometric_spiral.jpg",
+      coverImage: explicitCoverImage,
       tags: existing?.tags || ["Journal", "Reflections"],
       sections,
       sketches: existing?.sketches || [],
@@ -549,6 +602,12 @@ export const AdminPage: React.FC = () => {
             },
             mode: editingMusingId ? "update" : "create",
             targetId: editingMusingId || undefined,
+            imageUpload: pendingImageUpload
+              ? {
+                  mimeType: pendingImageUpload.mimeType,
+                  contentBase64: pendingImageUpload.contentBase64,
+                }
+              : undefined,
           }),
         });
 
@@ -576,6 +635,7 @@ export const AdminPage: React.FC = () => {
           : `Published "${musingForm.title}" to GitHub! Live site updates in ~1 minute.`;
         setLastPublishInfo({ message: actionMsg, commitUrl: data.commitUrl });
         showBanner(actionMsg);
+        setPendingImageUpload(null);
         setMusingModalOpen(false);
         return;
       } catch {
@@ -586,14 +646,20 @@ export const AdminPage: React.FC = () => {
       }
     }
 
+    const localPayload: Omit<JournalEntry, "id"> = {
+      ...musingPayload,
+      coverImage: pendingImageUpload?.previewUrl || explicitCoverImage,
+    };
+
     if (editingMusingId) {
-      updateMusing(editingMusingId, musingPayload);
+      updateMusing(editingMusingId, localPayload);
       showBanner(`Journal "${musingForm.title}" updated in browser preview.`);
     } else {
-      addMusing(musingPayload);
+      addMusing(localPayload);
       showBanner(`Draft "${musingForm.title}" saved to browser preview!`);
     }
 
+    setPendingImageUpload(null);
     setMusingModalOpen(false);
   };
 
@@ -1823,6 +1889,70 @@ export const AdminPage: React.FC = () => {
                     className="w-full px-3 py-2 bg-[#FBF9F5] border border-[#E0D8CB] rounded-sm text-sm"
                   />
                 </div>
+              </div>
+
+              <div className="p-4 bg-[#F7F3EB]/70 border border-[#E5DDCF] rounded-sm space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="block uppercase font-mono text-[#4B453E]">
+                    Journal Article Image (optional — appears only on this journal&apos;s page)
+                  </label>
+                  {(pendingImageUpload || musingForm.coverImage) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingImageUpload(null);
+                        setMusingForm({ ...musingForm, coverImage: "" });
+                      }}
+                      className="text-[11px] font-mono uppercase tracking-wider text-[#C53030] hover:underline"
+                    >
+                      Remove Image
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                  <label className="flex items-center justify-center space-x-2 px-3 py-2.5 bg-white border border-dashed border-[#C7B9A5] rounded-sm cursor-pointer hover:border-[#856E4E] text-[#4B453E] transition-colors">
+                    <Upload className="w-3.5 h-3.5 text-[#856E4E]" />
+                    <span>{pendingImageUpload ? pendingImageUpload.filename : "Upload Image (JPG/PNG/WebP, max 2.5 MB)"}</span>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      onChange={handleJournalImageSelect}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <input
+                    type="text"
+                    value={musingForm.coverImage}
+                    onChange={(e) => {
+                      setPendingImageUpload(null);
+                      setMusingForm({ ...musingForm, coverImage: e.target.value });
+                    }}
+                    placeholder="Or paste image URL (https://... or /assets/...)"
+                    className="w-full px-3 py-2.5 bg-white border border-[#E0D8CB] rounded-sm text-xs font-mono"
+                  />
+                </div>
+
+                {(pendingImageUpload?.previewUrl || musingForm.coverImage.trim()) && (
+                  <div className="flex items-center space-x-3 pt-1">
+                    <div className="w-20 h-14 rounded-xs overflow-hidden border border-[#E0D8CB] bg-white shrink-0 flex items-center justify-center">
+                      <img
+                        src={pendingImageUpload?.previewUrl || musingForm.coverImage.trim()}
+                        alt="Journal cover preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="text-[11px] text-[#736B61] flex items-center space-x-1.5 min-w-0">
+                      <ImageIcon className="w-3.5 h-3.5 text-[#856E4E] shrink-0" />
+                      <span className="truncate">
+                        {pendingImageUpload
+                          ? `Ready to commit with this journal (${pendingImageUpload.filename})`
+                          : musingForm.coverImage.trim()}
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
