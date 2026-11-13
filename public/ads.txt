@@ -1,0 +1,8 @@
+# Google AdSense Authorized Digital Sellers (ads.txt) for https://www.rishithagorupati.com/
+#
+# INSTRUCTIONS FOR AUTHOR / OWNER:
+# When your Google AdSense account is approved, copy your actual Publisher ID (pub-XXXXXXXXXXXXXXXX)
+# and paste your entry on a new line below:
+#
+# google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+#

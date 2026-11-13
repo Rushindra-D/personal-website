@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Feather, BookOpen } from "lucide-react";
 import { useData } from "../context/DataContext";
+import { SEO } from "../components/SEO";
 
 export const PoemDetailPage: React.FC = () => {
   const { poems } = useData();
@@ -48,9 +49,37 @@ export const PoemDetailPage: React.FC = () => {
     );
   }
 
+  const poemExcerpt =
+    currentPoem.excerpt ||
+    currentPoem.content
+      .replace(/[\r\n]+/g, " ")
+      .trim()
+      .slice(0, 150);
+
+  const poemJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: currentPoem.title,
+    headline: currentPoem.title,
+    author: {
+      "@type": "Person",
+      name: "Rishitha Gorupati",
+      url: "https://www.rishithagorupati.com/",
+    },
+    url: `https://www.rishithagorupati.com/poetry/${currentPoem.slug}`,
+    text: currentPoem.content,
+  };
+
   return (
-    <div>
-      {/* Subtle Top Reading Progress Indicator */}
+    <>
+      <SEO
+        title={`"${currentPoem.title}" — Poem by Rishitha Gorupati`}
+        description={`Read the original poem "${currentPoem.title}" by Rishitha Gorupati: ${poemExcerpt}`}
+        canonicalPath={`/poetry/${currentPoem.slug}`}
+        jsonLd={poemJsonLd}
+      />
+      <div>
+        {/* Subtle Top Reading Progress Indicator */}
       <div className="fixed top-20 left-0 w-full h-[2px] bg-transparent z-30">
         <div
           className="h-full bg-[#856E4E] transition-all duration-150"
@@ -137,5 +166,6 @@ export const PoemDetailPage: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };

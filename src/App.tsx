@@ -13,6 +13,10 @@ import { BookDetailPage } from "./pages/BookDetailPage";
 import { AboutPage } from "./pages/AboutPage";
 import { AchievementsPage } from "./pages/AchievementsPage";
 import { ContactPage } from "./pages/ContactPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
+import { TermsPage } from "./pages/TermsPage";
+import { DisclaimerPage } from "./pages/DisclaimerPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { AdminPage } from "./pages/AdminPage";
 import { DataProvider } from "./context/DataContext";
 
@@ -37,8 +41,11 @@ export const App: React.FC = () => {
               <Route path="/achievements" element={<AchievementsPage />} />
               <Route path="/about" element={<AboutPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/privacy" element={<PrivacyPage />} />
+              <Route path="/terms" element={<TermsPage />} />
+              <Route path="/disclaimer" element={<DisclaimerPage />} />
               <Route path="/admin" element={<AdminPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
           <Footer />

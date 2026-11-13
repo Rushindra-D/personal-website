@@ -5,6 +5,7 @@ import { useData } from "../context/DataContext";
 import { artworks } from "../data/artworks";
 import { ArtworkCard } from "../components/ArtworkCard";
 import { ArtworkLightbox } from "../components/ArtworkLightbox";
+import { SEO } from "../components/SEO";
 
 export const MusingsPage: React.FC = () => {
   const { musings } = useData();
@@ -31,7 +32,13 @@ export const MusingsPage: React.FC = () => {
       featuredExcerpt;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-16 sm:space-y-20">
+    <>
+      <SEO
+        title="Musings & Psychological Reflections | Rishitha Gorupati"
+        description="Contemplative essays and psychological inquiries by author Rishitha Gorupati exploring mindfulness, stillness, speech, and original Zentangle practice."
+        canonicalPath="/musings"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-16 sm:space-y-20">
       {/* Editorial Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center space-x-2 text-xs uppercase tracking-[0.25em] font-mono text-[#856E4E] bg-[#F7F3EB] px-3.5 py-1.5 rounded-full border border-[#EFE9DD]">
@@ -202,5 +209,6 @@ export const MusingsPage: React.FC = () => {
         onNavigate={(idx) => setLightboxIndex(idx)}
       />
     </div>
+    </>
   );
 };

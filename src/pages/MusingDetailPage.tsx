@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Calendar, Clock, Feather, Eye, Share2, Sparkles } from "lucide-react";
 import { useData } from "../context/DataContext";
 import { ArtworkLightbox } from "../components/ArtworkLightbox";
+import { SEO } from "../components/SEO";
 
 export const MusingDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -56,9 +57,37 @@ export const MusingDetailPage: React.FC = () => {
 
   const hasSketches = Boolean(musing.sketches && musing.sketches.length > 0);
 
+  const articleJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: musing.title,
+    description: musing.subtitle || musing.excerpt,
+    author: {
+      "@type": "Person",
+      name: musing.author || "Rishitha Gorupati",
+      url: "https://www.rishithagorupati.com/",
+    },
+    datePublished: musing.date,
+    url: `https://www.rishithagorupati.com/musings/${musing.slug}`,
+    image: musing.coverImage
+      ? musing.coverImage.startsWith("http")
+        ? musing.coverImage
+        : `https://www.rishithagorupati.com${musing.coverImage}`
+      : undefined,
+  };
+
   return (
-    <div>
-      {/* Top Reading Progress Bar */}
+    <>
+      <SEO
+        title={`"${musing.title}" — Journal by Rishitha Gorupati`}
+        description={musing.subtitle || musing.excerpt}
+        canonicalPath={`/musings/${musing.slug}`}
+        type="article"
+        image={musing.coverImage}
+        jsonLd={articleJsonLd}
+      />
+      <div>
+        {/* Top Reading Progress Bar */}
       <div className="fixed top-20 left-0 w-full h-[2.5px] bg-transparent z-30">
         <div
           className="h-full bg-[#856E4E] transition-all duration-150"
@@ -406,5 +435,6 @@ export const MusingDetailPage: React.FC = () => {
         />
       )}
     </div>
+    </>
   );
 };

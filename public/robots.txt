@@ -3,5 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /api/
 
-Sitemap: https://rishithagorupati.com/sitemap.xml
-
+Sitemap: https://www.rishithagorupati.com/sitemap.xml

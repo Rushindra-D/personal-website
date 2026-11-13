@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, ShoppingBag, ExternalLink, Feather } from "lucide-react";
 import { useData } from "../context/DataContext";
+import { SEO } from "../components/SEO";
 
 export const BookDetailPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -40,8 +41,44 @@ export const BookDetailPage: React.FC = () => {
     ["these-lines", "it-is", "give-more-to-life"].includes(p.slug)
   );
 
+  const bookDescription =
+    book.subtitle ||
+    (book.synopsis && book.synopsis[0]) ||
+    "A philosophical reflection on mortality, intentional presence, and purposeful living.";
+
+  const bookJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Book",
+    name: book.title,
+    headline: book.title,
+    author: {
+      "@type": "Person",
+      name: book.author || "Rishitha Gorupati",
+      url: "https://www.rishithagorupati.com/",
+    },
+    isbn: book.details?.isbn || "978-93-58136-03-6",
+    publisher: {
+      "@type": "Organization",
+      name: book.details?.publisher || "String Production India",
+    },
+    bookFormat: "https://schema.org/Paperback",
+    inLanguage: "en",
+    url: `https://www.rishithagorupati.com/books/${book.slug}`,
+    image: `https://www.rishithagorupati.com${book.coverFront}`,
+    description: bookDescription,
+  };
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-16">
+    <>
+      <SEO
+        title={`${book.title} | Book by Rishitha Gorupati`}
+        description={`${book.title} by Rishitha Gorupati (ISBN: ${book.details?.isbn || "978-93-58136-03-6"}). ${bookDescription}`}
+        canonicalPath={`/books/${book.slug}`}
+        type="book"
+        image={book.coverFront}
+        jsonLd={bookJsonLd}
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-16">
       {/* Back Button */}
       <div>
         <Link
@@ -276,5 +313,6 @@ export const BookDetailPage: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };

@@ -17,7 +17,7 @@ interface PublishedJournalRecord {
   status?: unknown;
 }
 
-const DEFAULT_BASE_URL = 'https://www.rishithagorupati.com';
+const CANONICAL_BASE_URL = 'https://www.rishithagorupati.com';
 
 const STATIC_PUBLIC_ROUTES: SitemapUrlEntry[] = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
@@ -27,6 +27,9 @@ const STATIC_PUBLIC_ROUTES: SitemapUrlEntry[] = [
   { path: '/achievements', changefreq: 'monthly', priority: '0.7' },
   { path: '/about', changefreq: 'monthly', priority: '0.8' },
   { path: '/contact', changefreq: 'monthly', priority: '0.7' },
+  { path: '/privacy', changefreq: 'monthly', priority: '0.5' },
+  { path: '/terms', changefreq: 'monthly', priority: '0.5' },
+  { path: '/disclaimer', changefreq: 'monthly', priority: '0.5' },
 ];
 
 const BUILT_IN_JOURNAL_SLUGS = ['fractals-of-thought'];
@@ -40,15 +43,8 @@ function escapeXml(value: string): string {
     .replace(/'/g, '&apos;');
 }
 
-function resolveBaseUrl(req: VercelRequest): string {
-  const forwardedHost = req.headers['x-forwarded-host'];
-  const rawHost = Array.isArray(forwardedHost) ? forwardedHost[0] : forwardedHost || req.headers.host || '';
-  const host = rawHost.split(',')[0].trim().toLowerCase();
-
-  if (host === 'rishithagorupati.com' || host === 'www.rishithagorupati.com') {
-    return `https://${host}`;
-  }
-  return DEFAULT_BASE_URL;
+function resolveBaseUrl(): string {
+  return CANONICAL_BASE_URL;
 }
 
 function readPublishedJournalSlugs(): string[] {
@@ -84,7 +80,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).send('Method Not Allowed');
   }
 
-  const baseUrl = resolveBaseUrl(req);
+  const baseUrl = resolveBaseUrl();
   const seenPaths = new Set<string>();
   const urls: SitemapUrlEntry[] = [];
 

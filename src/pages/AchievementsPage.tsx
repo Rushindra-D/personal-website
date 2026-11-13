@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { Award, BookOpen, ExternalLink, X, ChevronLeft, ChevronRight, ArrowRight, Sparkles } from "lucide-react";
 import { achievements } from "../data/achievements";
+import { SEO } from "../components/SEO";
 
 export const AchievementsPage: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<"all" | "publication" | "appreciation">("all");
@@ -15,7 +16,7 @@ export const AchievementsPage: React.FC = () => {
   const publicationCount = achievements.filter((a) => a.type === "publication").length;
   const appreciationCount = achievements.filter((a) => a.type === "appreciation").length;
 
-  const navigateLightbox = (direction: "prev" | "next") => {
+  const navigateLightbox = useCallback((direction: "prev" | "next") => {
     if (lightboxIndex === null) return;
     const total = filteredAchievements.length;
     setLightboxIndex(
@@ -23,7 +24,7 @@ export const AchievementsPage: React.FC = () => {
         ? (lightboxIndex + 1) % total
         : (lightboxIndex - 1 + total) % total
     );
-  };
+  }, [lightboxIndex, filteredAchievements.length]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -34,10 +35,16 @@ export const AchievementsPage: React.FC = () => {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [lightboxIndex, filteredAchievements]);
+  }, [lightboxIndex, navigateLightbox]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-12 sm:space-y-16">
+    <>
+      <SEO
+        title="Literary Achievements & Publications | Rishitha Gorupati"
+        description="Official certificates of publication, appreciation, and co-authored anthologies presented to author Rishitha Gorupati by recognized literary publishers."
+        canonicalPath="/achievements"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-12 sm:space-y-16">
       {/* Editorial Header */}
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center space-x-2 text-xs uppercase tracking-[0.25em] font-mono text-[#856E4E] bg-[#F7F3EB] px-3.5 py-1.5 rounded-full border border-[#EFE9DD]">
@@ -282,6 +289,7 @@ export const AchievementsPage: React.FC = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };
 

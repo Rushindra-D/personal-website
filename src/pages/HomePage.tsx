@@ -9,6 +9,7 @@ import { ArtworkLightbox } from "../components/ArtworkLightbox";
 import { BookCard } from "../components/BookCard";
 import { Timeline } from "../components/Timeline";
 import { useData } from "../context/DataContext";
+import { SEO } from "../components/SEO";
 
 export const HomePage: React.FC = () => {
   const { authorData, poems, books, musings } = useData();
@@ -29,8 +30,41 @@ export const HomePage: React.FC = () => {
     details: {},
   };
 
+  const homeJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: "Rishitha Gorupati",
+      url: "https://www.rishithagorupati.com/",
+      description: "Official portfolio of author, poet, and writer Rishitha Gorupati.",
+      author: {
+        "@type": "Person",
+        name: "Rishitha Gorupati",
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: "Rishitha Gorupati",
+      url: "https://www.rishithagorupati.com/",
+      jobTitle: "Author, Poet & Writer",
+      description: authorData.bio,
+      sameAs: [
+        authorData.social.linkedin,
+        authorData.social.instagram,
+      ],
+    },
+  ];
+
   return (
-    <div className="space-y-24 sm:space-y-32">
+    <>
+      <SEO
+        title="Rishitha Gorupati | Author, Poet & Writer"
+        description="Official literary portfolio of Rishitha Gorupati, author of That Day is Inevitable. Discover original poetry, reflective journals, published volumes, and art inquiries."
+        canonicalPath="/"
+        jsonLd={homeJsonLd}
+      />
+      <div className="space-y-24 sm:space-y-32">
       {/* 1. HERO SECTION */}
       <section className="relative pt-12 pb-8 sm:pt-20 sm:pb-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
@@ -335,5 +369,6 @@ Forever and ever..`}
         onNavigate={(idx) => setLightboxIndex(idx)}
       />
     </div>
+    </>
   );
 };

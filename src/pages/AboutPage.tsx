@@ -4,6 +4,7 @@ import { Feather, BookOpen, Palette, PenTool, ArrowRight, X, ChevronLeft, Chevro
 import { useData } from "../context/DataContext";
 import { Timeline } from "../components/Timeline";
 import { achievements } from "../data/achievements";
+import { SEO } from "../components/SEO";
 
 export const AboutPage: React.FC = () => {
   const { authorData } = useData();
@@ -20,7 +21,13 @@ export const AboutPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-24">
+    <>
+      <SEO
+        title="About Rishitha Gorupati | Author Biography"
+        description="Learn about author, poet, and writer Rishitha Gorupati. Discover her background, philosophical reflections, published book That Day is Inevitable, and literary milestones."
+        canonicalPath="/about"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-24">
       {/* Header & Hero Biography */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
         {/* Left: Two Editorial Portraits */}
@@ -328,5 +335,6 @@ export const AboutPage: React.FC = () => {
         </div>
       </section>
     </div>
+    </>
   );
 };

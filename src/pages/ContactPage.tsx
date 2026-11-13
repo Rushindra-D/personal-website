@@ -3,10 +3,17 @@ import { Mail, MessageSquare } from "lucide-react";
 import { LinkedinIcon, InstagramIcon } from "../components/SocialIcons";
 import { authorData } from "../data/author";
 import { ContactForm } from "../components/ContactForm";
+import { SEO } from "../components/SEO";
 
 export const ContactPage: React.FC = () => {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-16">
+    <>
+      <SEO
+        title="Contact Rishitha Gorupati | Author Inquiries"
+        description="Get in touch with author and poet Rishitha Gorupati for literary discussions, readings, book reflections on That Day is Inevitable, and collaborations."
+        canonicalPath="/contact"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-20 space-y-16">
       {/* Header */}
       <div className="text-center max-w-2xl mx-auto space-y-4">
         <span className="text-xs uppercase tracking-[0.25em] font-mono text-[#856E4E]">
@@ -117,5 +124,6 @@ export const ContactPage: React.FC = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };

@@ -125,15 +125,29 @@ export const Footer: React.FC = () => {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-14 pt-8 border-t border-[#EFE9DD] flex flex-col sm:flex-row items-center justify-between text-xs text-[#968D81] gap-4">
+        <div className="mt-14 pt-8 border-t border-[#EFE9DD] flex flex-col md:flex-row items-center justify-between text-xs text-[#968D81] gap-4">
           <p>© 2026 Rishitha Gorupati. All rights reserved.</p>
-          <div className="flex items-center space-x-4 text-[11px] tracking-wide text-[#736B61]">
-            <span>Designed with literary care</span>
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] tracking-wide text-[#736B61]">
+            <Link to="/privacy" className="hover:text-[#221E1B] transition-colors">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link to="/terms" className="hover:text-[#221E1B] transition-colors">
+              Terms &amp; Conditions
+            </Link>
+            <span>•</span>
+            <Link to="/disclaimer" className="hover:text-[#221E1B] transition-colors">
+              Disclaimer
+            </Link>
+            <span>•</span>
+            <Link to="/contact" className="hover:text-[#221E1B] transition-colors">
+              Contact
+            </Link>
             <span>•</span>
             <Link
               to="/admin"
               className="inline-flex items-center text-[#856E4E] hover:text-[#221E1B] transition-colors"
-              title="Author & Admin Portal"
+              title="Author &amp; Admin Portal"
             >
               <Lock className="w-3 h-3 mr-1" />
               Author Portal

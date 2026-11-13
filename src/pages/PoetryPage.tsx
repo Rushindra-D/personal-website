@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import { Search, Feather, X } from "lucide-react";
 import { PoetryCard } from "../components/PoetryCard";
 import { useData } from "../context/DataContext";
+import { SEO } from "../components/SEO";
 
 export const PoetryPage: React.FC = () => {
   const { poems } = useData();
@@ -21,7 +22,13 @@ export const PoetryPage: React.FC = () => {
   }, [searchQuery, poems]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-12">
+    <>
+      <SEO
+        title="Poetry Collection | Original Poems by Rishitha Gorupati"
+        description="Discover 24 original manuscript poems by author and poet Rishitha Gorupati, exploring thoughts, emotions, distance, silence, and human reflections."
+        canonicalPath="/poetry"
+      />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-12 sm:py-16 space-y-12">
       {/* Page Header */}
       <div className="text-center max-w-2xl mx-auto space-y-4">
         <span className="text-xs uppercase tracking-[0.25em] font-mono text-[#856E4E]">
@@ -89,5 +96,6 @@ export const PoetryPage: React.FC = () => {
         </div>
       )}
     </div>
+    </>
   );
 };
